@@ -122,12 +122,9 @@ const SendButton = styled.button`
 `;
 
 export function AIChatBox() {
-  const chatProps = useChat() as any;
-  const messages = chatProps.messages || [];
-  const isLoading = chatProps.isLoading || false;
-  const error = chatProps.error;
+  const { messages, status, error, sendMessage } = useChat() as any;
+  const isLoading = status === 'streaming' || status === 'submitted';
   
-  // Robust local state for the input field
   const [localInput, setLocalInput] = React.useState('');
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
@@ -138,17 +135,7 @@ export function AIChatBox() {
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!localInput.trim()) return;
-    
-    if (chatProps.append) {
-      chatProps.append({
-        id: String(Date.now()),
-        role: 'user',
-        content: localInput
-      });
-    } else if (chatProps.handleSubmit) {
-      chatProps.setInput?.(localInput);
-      chatProps.handleSubmit(e);
-    }
+    sendMessage({ text: localInput });
     setLocalInput('');
   };
 
@@ -164,11 +151,14 @@ export function AIChatBox() {
           ¡Hola! Soy tu asistente de Plenish. ¿Qué comiste hoy o necesitas ayuda planificando tu semana?
         </MessageBubble>
         
-        {messages.map((m: any) => (
-          <MessageBubble key={m.id || Math.random()} $role={m.role as 'user' | 'assistant'}>
-            {m.content}
-          </MessageBubble>
-        ))}
+        {messages.map((m: any) => {
+          const content = m.content || m.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('') || '';
+          return (
+            <MessageBubble key={m.id || Math.random()} $role={m.role as 'user' | 'assistant'}>
+              {content}
+            </MessageBubble>
+          );
+        })}
         
         {isLoading && (
           <MessageBubble $role="assistant">
@@ -178,7 +168,7 @@ export function AIChatBox() {
         
         {error && (
           <div style={{ color: '#ef4444', fontSize: '0.875rem', padding: '1rem', border: '1px solid #ef4444', borderRadius: '8px', marginTop: '0.5rem' }}>
-            <strong>Error:</strong> The server rejected the message (API not yet connected). Keep an eye on the Next.js console!
+            <strong>Error:</strong> {error.message || 'An unknown error occurred while communicating with the AI.'}
           </div>
         )}
         
