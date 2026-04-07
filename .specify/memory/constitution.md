@@ -1,50 +1,70 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# Plenish Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. User-First Nutrition Intelligence
+Plenish exists to remove the cognitive load of eating well. Every feature must serve one of three user outcomes: logging what was eaten, understanding nutritional progress, or deciding what to eat next. Features that do not serve a clear outcome are not built.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. AI as Advisor, Not Oracle
+The AI recommendation engine surfaces suggestions — the user always has the final word. Recommendations must be explainable (why this meal?), replaceable (user can swap any suggestion), and grounded in real data (meal history + nutrition goals). Never generate recommendations without user context.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Spec-Driven Development (NON-NEGOTIABLE)
+All new features must be cross-referenced against `docs/product_spec.md` and `docs/database_schema.md` before implementation begins. No schema changes without a migration file in `supabase/migrations/`. No UI that contradicts the spec is merged.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Typed, Server-Authoritative Data Layer
+Data mutations happen exclusively through Server Actions in `src/actions/`. Client components never call `/api/` routes for mutations. All user identity is derived from `supabase.auth.getUser()` — never hardcoded or passed as props. RLS policies protect every table.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Consistency Over Cleverness
+The codebase uses one styling system (styled-components), one AI provider abstraction (`src/lib/ai/provider.ts`), one Supabase client pattern (`src/lib/supabase/`), and one dashboard composition pattern (slot props + Suspense). Introducing a second way to do anything requires explicit justification and team agreement.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Technical Constraints
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+- **No Tailwind CSS** — styled-components exclusively; dark-mode first aesthetic
+- **No inline Supabase client instantiation** — always use `src/lib/supabase/client.ts` or `server.ts`
+- **No hardcoded user IDs or content** — all data must be user-scoped via auth
+- **No mocked data in production paths** — stubs (`CurrentRecommendation`, `NutritionGoals`) must be replaced before a feature is considered done
+- **TypeScript strict mode** — zero type errors required; run `npm run build` before finalizing any change
+- **Bilingual by default** — UI copy must support English and Spanish; Spanish is the primary audience
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Development Workflow
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+1. **Spec first** — consult `docs/product_spec.md` before opening any file
+2. **Schema changes** — write migration, update `docs/database_schema.md`, then code
+3. **New dashboard data** — follow the slot pattern: async Server Component fetcher → slot prop → `<Suspense>` with skeleton
+4. **AI features** — use `getAIModel()` from `src/lib/ai/provider.ts`; prefer `generateObject` + Zod schema for structured outputs
+5. **Build gate** — `npm run build` must pass with zero errors before any PR is considered ready
+
+## Conflict Detection & Governance Evolution
+
+**Before executing any request**, check for conflicts across all governance files:
+- This constitution
+- `docs/product_spec.md`
+- `docs/database_schema.md`
+- `README.md`
+- `CLAUDE.md` / `AGENTS.md`
+- Any other file used as a guideline or reference
+
+If the user's prompt conflicts with any of these files — or if these files conflict with each other — **stop and surface the conflict explicitly** before doing any work. Use this format:
+
+```
+CONFLICT DETECTED
+- Your prompt says: [X]
+- [governance file] says: [Y]
+- Recommendation: [update the spec / update the constitution / clarify intent]
+```
+
+Do not silently resolve conflicts by picking one side. The goal is to keep all governance files consistent and accurate. When a conflict is found, the user decides which source of truth wins, then both files are updated to reflect that decision.
+
+This applies equally to conflicts between governance files themselves — if `product_spec.md` contradicts the constitution, flag it.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes all other conventions in the codebase. When a practice conflicts with these principles, the constitution wins. Amendments require updating this file with a rationale comment and incrementing the version.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+All code review must verify:
+- Spec compliance (`docs/product_spec.md`)
+- No Tailwind, no inline Supabase clients, no hardcoded user data
+- Build passes with zero type errors
+- Bilingual support preserved
+
+**Version**: 1.0.0 | **Ratified**: 2026-04-07 | **Last Amended**: 2026-04-07
