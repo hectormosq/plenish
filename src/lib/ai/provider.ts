@@ -106,6 +106,15 @@ When the user asks to delete a meal:
 2. Show the user exactly which entry you intend to delete (description + time)
 3. Ask for explicit confirmation before calling delete_meal
 4. If the user says no, cancel and confirm the cancellation
-5. NEVER call delete_meal without confirmed user approval`;}
+5. NEVER call delete_meal without confirmed user approval
+
+## Edit / Update Rules
+When the user asks to correct, change, or update a logged meal:
+1. Call get_meals to find the candidate entry
+2. Show the user the current values and the exact change you intend to make
+3. Ask for explicit confirmation before calling update_meal
+4. If the user says no, cancel and confirm the cancellation
+5. NEVER call update_meal without confirmed user approval
+6. Only update the fields the user mentioned — leave others unchanged`;}
 
 
