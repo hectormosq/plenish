@@ -3,7 +3,6 @@
 import type { ReactNode } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { AIChatBox } from '@/components/specific/AIChatBox';
-import { LogMealForm } from '@/components/specific/LogMealForm';
 import { Utensils, LogOut } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -101,7 +100,7 @@ const LeftColumn = styled.div`
   gap: 2rem;
 `;
 
-export function DashboardLayout({ recentMealsSlot, recommendationSlot }: { recentMealsSlot: ReactNode; recommendationSlot: ReactNode }) {
+export function DashboardLayout({ recentMealsSlot, recommendationSlot, householdSlot, logMealFormSlot, sharedMealLogSlot }: { recentMealsSlot: ReactNode; recommendationSlot: ReactNode; householdSlot?: ReactNode; logMealFormSlot?: ReactNode; sharedMealLogSlot?: ReactNode }) {
   const router = useRouter();
 
   async function handleSignOut() {
@@ -128,12 +127,14 @@ export function DashboardLayout({ recentMealsSlot, recommendationSlot }: { recen
         {/* Left Column — Primary AI Interaction & Forms */}
         <LeftColumn>
           <AIChatBox />
-          <LogMealForm />
+          {logMealFormSlot}
         </LeftColumn>
 
         {/* Right Column — Context & Progress */}
         <RightColumn>
           {recentMealsSlot}
+          {householdSlot}
+          {sharedMealLogSlot}
           {recommendationSlot}
         </RightColumn>
       </PageContent>
