@@ -127,7 +127,7 @@ export function createMealTools(tzOffsetMinutes: number) {
           log_text,
           meal_type,
           eaten_at: eaten_at ?? new Date().toISOString(),
-          nutrition,
+          nutrition: { ...nutrition, servings: nutrition.servings ?? {} },
           inferred_ingredients: inferred_ingredients ?? null,
         })
         .select('id')

@@ -14,7 +14,8 @@ export const NutritionSchema = z.object({
   protein_type: z.enum(['white_meat', 'red_meat', 'fish_blue', 'fish_white', 'eggs', 'legumes'])
     .nullable()
     .describe('Primary protein type, or null if no protein.'),
-  servings: ServingsSchema,
+  servings: ServingsSchema.optional()
+    .describe('Sparse map of integer serving counts, NESTED inside the nutrition object. Keys: dairy, grains, fruit, vegetables, fish, meat, eggs, nuts, legumes. Only include categories with count >= 1 (whole integers). Omit zeroes and fractional values. Omit entirely if no serving counts can be determined.'),
   has_occasional_food: z.boolean()
     .describe('True if the meal contains occasional foods (sweets, cold cuts, sausages, etc.).'),
   portion_confidence: z.enum(['from_recipe', 'stated', 'estimated'])
@@ -22,4 +23,5 @@ export const NutritionSchema = z.object({
 });
 
 export type ServingCategory  = z.infer<typeof ServingCategoryEnum>;
+// servings is optional in the schema — normalize to {} when absent
 export type MealNutrition    = z.infer<typeof NutritionSchema>;
