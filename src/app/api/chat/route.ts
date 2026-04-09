@@ -19,7 +19,7 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model,
-    system: getSystemPrompt(),
+    system: getSystemPrompt(tz),
     messages: await convertToModelMessages(messages),
     tools: {
       get_meals: getMealsTool,

@@ -74,7 +74,14 @@ export function createMealTools(tzOffsetMinutes: number) {
             localDate.getUTCDate() - 1,
             0, 0, 0, 0
           ) + offsetMs;
-        const localYesterdayEndMs = localYesterdayStartMs + 86_400_000 - 1;
+        const localTodayStartMs =
+          Date.UTC(
+            localDate.getUTCFullYear(),
+            localDate.getUTCMonth(),
+            localDate.getUTCDate(),
+            0, 0, 0, 0
+          ) + offsetMs;
+        const localYesterdayEndMs = localTodayStartMs - 1;
         rangeStart = new Date(localYesterdayStartMs).toISOString();
         rangeEnd = new Date(localYesterdayEndMs).toISOString();
       } else {

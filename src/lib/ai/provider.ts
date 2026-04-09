@@ -31,10 +31,12 @@ export function getAIModel(): LanguageModel {
   }
 }
 
-export function getSystemPrompt(): string {
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+export function getSystemPrompt(tzOffsetMinutes: number = 0): string {
+  const serverNow = new Date();
+  const localMs = serverNow.getTime() - tzOffsetMinutes * 60_000;
+  const localNow = new Date(localMs);
+  const dateStr = localNow.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+  const timeStr = localNow.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
   return buildSystemPrompt(`Today is ${dateStr} at ${timeStr}.`);
 }
 
