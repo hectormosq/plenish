@@ -45,7 +45,41 @@ Automatically managed by Supabase Auth (`auth.users`), but we track public profi
   ```
   `servings` is sparse — only non-zero categories are stored. `portion_confidence`: `"from_recipe"` | `"stated"` | `"estimated"`. Null for meals logged before this feature.
 - `inferred_ingredients` (text[], nullable) – AI-inferred ingredient strings for unlinked meals (e.g. `["1 arepa (60g)", "1 huevo mediano", "40g queso feta"]`). Cleared when a recipe is created and linked via `recipe_ids`.
+- `is_shared` (boolean) default false – True when this meal was logged as shared with household members.
+- `household_id` (uuid, nullable) references `public.households` ON DELETE SET NULL – The household this shared meal belongs to. Set only when `is_shared = true`.
 - `eaten_at` (timestamptz) – Date/time this meal was taken.
+
+### `public.households`
+**Purpose:** Represents a named household group. One admin, any number of members.
+- `id` (uuid) PK
+- `name` (varchar) — display name (e.g., "Casa García")
+- `created_by` (uuid) references `public.users`
+- `created_at` (timestamptz)
+
+> **RLS**: Members-only SELECT (via `is_household_member()` helper). INSERT restricted to authenticated users. Only admins can UPDATE or DELETE (via `is_household_admin()` helper).
+
+### `public.household_members`
+**Purpose:** Tracks membership (active) and pending invitations for a household. One row per user per household.
+- `id` (uuid) PK
+- `household_id` (uuid) references `public.households` ON DELETE CASCADE
+- `user_id` (uuid, nullable) references `public.users` — null until an unregistered invited user creates an account
+- `invited_email` (varchar, nullable) — set when inviting an unregistered user; cleared once `user_id` is linked
+- `role` (varchar) — `'admin'` or `'member'`. Exactly one admin per household at a time.
+- `status` (varchar) — `'pending'` or `'active'`
+- `created_at` (timestamptz) — used for admin-transfer ordering (longest-standing member promoted)
+
+> **Admin transfer**: When a member with `role='admin'` is deleted, a trigger promotes the oldest active member. If no active members remain, the household is deleted.
+> **Invite flow**: When an unregistered user registers, `handle_new_user()` auto-links any `household_members` row matching their email, setting `user_id`. The user still must explicitly accept (status='active').
+
+### `public.meal_participants`
+**Purpose:** Junction table linking a shared meal log entry to its co-eaters. Does not include the original logger (tracked via `meal_logs.user_id`).
+- `id` (uuid) PK
+- `meal_log_id` (uuid) references `public.meal_logs` ON DELETE CASCADE
+- `user_id` (uuid) references `public.users` ON DELETE CASCADE — the co-eater
+- `dismissed` (boolean) default false — co-eater dismissed this meal from their view
+- `created_at` (timestamptz)
+
+> **Dismissal**: Co-eaters can dismiss a shared meal (sets `dismissed=true`) without deleting it. The meal still appears in the household shared log and for the original logger.
 
 ### `public.weekly_plan`
 **Purpose:** Represents a specific 7-day schedule for a user.

@@ -21,7 +21,7 @@ A user creates a household group and invites people they live with (family membe
 2. **Given** a household admin, **When** they invite another registered user by email, **Then** the invited user receives an invitation they can accept or decline.
 3. **Given** an invited user, **When** they accept the invitation, **Then** they are added as a member of the household and can access its shared meal history.
 4. **Given** an invited user, **When** they decline the invitation, **Then** their status remains unchanged and no data is shared.
-5. **Given** a registered user, **When** they belong to a household and then leave it, **Then** their individual meal history remains intact and no longer appears in the household's shared log.
+5. **Given** a registered user, **When** they belong to a household and then leave it, **Then** their individual meal history and the shared meal history added while was in the household remains intact and no longer appears in the household group.
 
 ---
 
@@ -80,12 +80,26 @@ The recommendation system considers both a user's individual meal history and th
 ### Edge Cases
 
 - What happens when a user is invited to a household but the invite link expires before they act on it?
+    - Answer: the user should dismiss or accept the invitation
 - How does the system handle a user who belongs to multiple households (e.g., split custody family)?
+    - Answer: User can have a defautl household, if belongs to only one it is selected by default.
+    - if the user belongs to a household and wants to record a meal, it can change the group to "JustMe"
+    - If the user belongs to a household and wants to select what users from the group, it can click on more option button to individually select the members
 - What if a household admin leaves the household — who becomes the new admin?
+    - Answer: The oldest member available
+    - If no other member exists, the group gets deleted
 - What happens to shared meals if a member is removed from the household — do those meals remain in non-member users' histories?
+    - Yes, as they were record while it was a member of the group
 - What if a user logs a shared meal for a co-eater who then leaves the household before viewing it?
+    - When a user records a meal to a group, the meals get recorded for the selected users at that point
 - How are recommendations handled when household members have conflicting dietary restrictions (e.g., one is vegetarian, one is not)?
+    - That should be specify in diet guidelines. When creating a diet guidelines there should be a reminder for this
+    - If not specified as guideline, the meal recomendation should try to find a mid point for users
+    - If no midpoint is possible or user specifies, separete recommendations should be made for uncompatible sides, mains, etc of the meal
 - What if a shared meal log for the household is very large — how is pagination handled in the shared feed?
+    - Shared feed should be paginated. But that is not a goal for this spec
+- What if an user made a mistake while recording the meal by adding it for a household member but in the reality that member hasn't participated on that meal ?
+    - Affected user can override that meal for itself or simple dismiss it
 
 ## Requirements *(mandatory)*
 
@@ -94,7 +108,7 @@ The recommendation system considers both a user's individual meal history and th
 - **FR-001**: A registered user MUST be able to create a new household with a display name, becoming its admin upon creation.
 - **FR-002**: A household admin MUST be able to invite other registered users to their household by email address.
 - **FR-003**: An invited user MUST be able to accept or decline a household invitation; declining produces no side effects.
-- **FR-004**: A household member MUST be able to leave a household at any time; their individual meal history MUST be preserved.
+- **FR-004**: A household member MUST be able to leave a household at any time; their individual meal history and the shared history while belong to the household MUST be preserved.
 - **FR-005**: When a user logs a meal, they MUST be able to optionally select one or more household members as co-eaters, marking the meal as shared.
 - **FR-006**: A shared meal MUST appear in the individual meal history of every user listed as a co-eater, including the user who logged it.
 - **FR-007**: The system MUST provide a shared household meal log — a unified, chronological view of all meals tagged as shared within the household.
@@ -104,6 +118,8 @@ The recommendation system considers both a user's individual meal history and th
 - **FR-011**: The system MUST enforce data isolation: users outside a household MUST NOT be able to read any meals or member data belonging to that household.
 - **FR-012**: Only the user who logged a shared meal MUST be able to delete it; deletion removes the entry from all co-eaters' histories, after explicit confirmation.
 - **FR-013**: A household admin MUST be able to remove a member from the household; removed members' individual logs are unaffected.
+- **FR-014**: A group member can delete a shared meal only for itself, the recorded meal will still appear for the other specified members.
+- **FR-015**: A registered user can invite to another user by using its email, doesnt matter if the user does not exists on the app. When the invited member registers in the app can see the invitation
 
 ### Key Entities
 
@@ -127,10 +143,11 @@ The recommendation system considers both a user's individual meal history and th
 ## Assumptions
 
 - Each user can belong to at most one household at a time. Multi-household membership is out of scope for this version.
-- Household invitations are sent to the email address of an existing Plenish account. Inviting non-registered users (with a pending signup flow) is out of scope.
+- Household invitations are sent to the email address and gets recorded in the app. Any notification made externally from the app is out of the scope. If the invited member it doesnt exist, when creates its account can see the invitation
 - A household has no maximum member count limit for this version; scaling constraints will be addressed if needed.
 - Shared meal logging requires the meal logger to be online — offline/sync scenarios are out of scope.
 - Co-eaters on a shared meal cannot independently edit the meal entry; only the original logger can modify or delete it.
+- Co eaters can dismiss a recorded meal from another group member
 - Historical individual meals logged before a user joins a household remain individual — they are not retroactively shared with the household.
 - The recommendation engine uses the combined household history by default, but this default can be overridden per-request through a natural language qualifier (e.g., "just for me" vs. "for all of us").
 - Household membership role hierarchy is simple: admin (can invite/remove members) and member (can log/view shared meals). A household has exactly one admin at a time.

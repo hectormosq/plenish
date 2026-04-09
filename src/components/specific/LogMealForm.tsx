@@ -4,8 +4,9 @@ import React, { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import styled, { keyframes, css } from 'styled-components';
 import { logMeal, MealType } from '@/actions/meals';
+import type { HouseholdMemberSimple } from '@/actions/households';
 import { Card, CardTitle } from '@/components/ui/Card';
-import { PlusCircle, Loader2 } from 'lucide-react';
+import { PlusCircle, Loader2, Users } from 'lucide-react';
 
 const FormContainer = styled.form`
   display: flex;
@@ -99,12 +100,69 @@ const SubmitButton = styled.button<{ $loading?: boolean }>`
   }
 `;
 
-export function LogMealForm() {
+// ─── Household share controls ─────────────────────────────────────────────────
+
+const ShareToggle = styled.button<{ $active: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: ${({ $active }) => ($active ? 'rgba(59,130,246,0.15)' : 'transparent')};
+  border: 1px solid ${({ $active }) => ($active ? '#3b82f6' : '#333')};
+  color: ${({ $active }) => ($active ? '#93c5fd' : '#6b7280')};
+  border-radius: 8px;
+  padding: 0.45rem 0.875rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+
+  &:hover { border-color: #3b82f6; color: #93c5fd; }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+`;
+
+const MemberCheckboxList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+`;
+
+const MemberCheckRow = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #d1d5db;
+  cursor: pointer;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  background: #1a1a1a;
+
+  input[type='checkbox'] { accent-color: #3b82f6; }
+`;
+
+interface LogMealFormProps {
+  householdMembers?: HouseholdMemberSimple[];
+  householdId?: string | null;
+}
+
+export function LogMealForm({ householdMembers = [], householdId = null }: LogMealFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [logText, setLogText] = useState('');
   const [mealType, setMealType] = useState<MealType>('lunch');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isShared, setIsShared] = useState(false);
+  const [selectedCoEaters, setSelectedCoEaters] = useState<Set<string>>(new Set());
+
+  const toggleCoEater = (userId: string) => {
+    setSelectedCoEaters((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId); else next.add(userId);
+      return next;
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,8 +171,14 @@ export function LogMealForm() {
 
     startTransition(async () => {
       try {
-        await logMeal(logText, mealType);
-        setLogText(''); // Reset form on success
+        await logMeal(logText, mealType, isShared && householdId ? {
+          isShared: true,
+          householdId,
+          coEaterIds: Array.from(selectedCoEaters),
+        } : undefined);
+        setLogText('');
+        setIsShared(false);
+        setSelectedCoEaters(new Set());
         router.refresh();
       } catch (e: unknown) {
         console.error('Failed to log meal:', e);
@@ -162,6 +226,36 @@ export function LogMealForm() {
             disabled={isPending}
           />
         </InputGroup>
+
+        {householdMembers.length > 0 && (
+          <InputGroup>
+            <ShareToggle
+              type="button"
+              $active={isShared}
+              disabled={isPending}
+              onClick={() => { setIsShared((v) => !v); setSelectedCoEaters(new Set()); }}
+            >
+              <Users size={13} />
+              {isShared ? 'Sharing with household' : 'Share with household'}
+            </ShareToggle>
+
+            {isShared && (
+              <MemberCheckboxList>
+                {householdMembers.map((m) => (
+                  <MemberCheckRow key={m.user_id}>
+                    <input
+                      type="checkbox"
+                      checked={selectedCoEaters.has(m.user_id)}
+                      onChange={() => toggleCoEater(m.user_id)}
+                      disabled={isPending}
+                    />
+                    {m.display_name}
+                  </MemberCheckRow>
+                ))}
+              </MemberCheckboxList>
+            )}
+          </InputGroup>
+        )}
 
         <SubmitButton type="submit" $loading={isPending} disabled={isPending || !logText.trim()}>
           {isPending ? (

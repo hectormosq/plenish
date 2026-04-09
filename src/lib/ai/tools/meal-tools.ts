@@ -113,11 +113,22 @@ export function createMealTools(tzOffsetMinutes: number) {
           '(e.g. "1 arepa (60g harina de maíz)", "40g queso feta"). ' +
           'Populate even when a recipe_suggestion might exist — it is cleared automatically if the user links a recipe.',
         ),
+      is_shared: z.boolean().optional().default(false)
+        .describe(
+          'True when multiple household members ate this meal together. ' +
+          'Set when the user uses first-person plural cues: "comimos", "cenamos", "todos", "en casa juntos".',
+        ),
+      household_id: z.uuid().optional()
+        .describe('Household UUID from system context. Set only when is_shared=true.'),
+      co_eater_ids: z.array(z.uuid()).optional()
+        .describe('User IDs of household members who also ate this meal (excludes the logger). From system context.'),
     }),
-    execute: async ({ log_text, meal_type, eaten_at, nutrition, inferred_ingredients }) => {
+    execute: async ({ log_text, meal_type, eaten_at, nutrition, inferred_ingredients, is_shared, household_id, co_eater_ids }) => {
       const supabase = await createClient();
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) return { success: false, error: 'Unauthorized' };
+
+      const shared = is_shared ?? false;
 
       // Insert the meal log
       const { data, error } = await supabase
@@ -129,11 +140,21 @@ export function createMealTools(tzOffsetMinutes: number) {
           eaten_at: eaten_at ?? new Date().toISOString(),
           nutrition: { ...nutrition, servings: nutrition.servings ?? {} },
           inferred_ingredients: inferred_ingredients ?? null,
+          is_shared: shared,
+          household_id: shared ? (household_id ?? null) : null,
         })
         .select('id')
         .single();
 
       if (error) return { success: false, error: error.message };
+
+      // Insert co-eater participant rows for shared meals
+      const participants: string[] = [];
+      if (shared && co_eater_ids && co_eater_ids.length > 0) {
+        const rows = co_eater_ids.map((uid) => ({ meal_log_id: data.id, user_id: uid }));
+        const { error: pError } = await supabase.from('meal_participants').insert(rows);
+        if (!pError) participants.push(...co_eater_ids);
+      }
 
       // Search for an existing recipe by name similarity (ilike on most distinctive word)
       const keyword = log_text.split(/\s+/).find(w => w.length > 4) ?? log_text.split(/\s+/)[0];
@@ -151,6 +172,8 @@ export function createMealTools(tzOffsetMinutes: number) {
         meal_id: data.id,
         meal_type,
         nutrition,
+        is_shared: shared,
+        participants,
         recipe_suggestion: match ?? null,
       };
     },
@@ -387,22 +410,48 @@ export function createMealTools(tzOffsetMinutes: number) {
     inputSchema: z.object({
       period: z.enum(['today', 'week']).default('today')
         .describe('today = current local day only; week = last 7 days including today.'),
+      scope: z.enum(['individual', 'household', 'combined']).optional().default('combined')
+        .describe(
+          '"individual" = only the caller\'s own meals; ' +
+          '"household" = shared household meals only; ' +
+          '"combined" (default) = individual + household shared meals. ' +
+          'For users with no household, always falls back to individual regardless of scope.',
+        ),
     }),
-    execute: async ({ period }) => {
+    execute: async ({ period, scope }) => {
       const supabase = await createClient();
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) return { error: 'Unauthorized' };
 
       const todayRange = getDateRange('today');
 
+      // Resolve the user's household (needed for household/combined scopes)
+      const { data: membership } = await supabase
+        .from('household_members')
+        .select('household_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+      const householdId = membership?.household_id ?? null;
+
       const fetchMeals = async (rangeStart: string, rangeEnd: string) => {
-        const { data } = await supabase
+        let query = supabase
           .from('meal_logs')
           .select('meal_type, nutrition, eaten_at')
-          .eq('user_id', user.id)
           .gte('eaten_at', rangeStart)
           .lte('eaten_at', rangeEnd)
           .order('eaten_at', { ascending: true });
+
+        if (!householdId || scope === 'individual') {
+          query = query.eq('user_id', user.id);
+        } else if (scope === 'household') {
+          query = query.eq('is_shared', true).eq('household_id', householdId);
+        } else {
+          // combined: own meals OR shared meals from household
+          query = query.or(`user_id.eq.${user.id},and(is_shared.eq.true,household_id.eq.${householdId})`);
+        }
+
+        const { data } = await query;
         return data ?? [];
       };
 

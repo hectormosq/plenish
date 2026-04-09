@@ -31,7 +31,7 @@
 
 ## Notes
 
-- FR-001 through FR-013 all map to specific acceptance scenarios in user stories.
+- FR-001 through FR-015 all map to specific acceptance scenarios in user stories (FR-014 and FR-015 added from edge case answers).
 - SC-006 (data isolation) is critical from a security perspective and must be validated early in implementation.
 - The assumption that users belong to at most one household significantly simplifies the data model and should be revisited if household membership needs grow.
 - Admin transfer on departure (last assumption) is a critical edge case to implement correctly.

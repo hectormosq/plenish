@@ -1,5 +1,8 @@
 import { DashboardLayout } from './DashboardLayout';
 import { RecentMeals } from '@/components/specific/RecentMeals';
+import { HouseholdPanel } from '@/components/specific/HouseholdPanel';
+import { SharedMealLog } from '@/components/specific/SharedMealLog';
+import { LogMealFormWrapper } from '@/components/specific/LogMealFormWrapper';
 import { RecommendationFetcher } from '@/components/specific/RecommendationFetcher';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { Suspense } from 'react';
@@ -11,6 +14,11 @@ export default async function DashboardPage() {
   
   return (
     <DashboardLayout
+      logMealFormSlot={
+        <Suspense fallback={<SkeletonCard />}>
+          <LogMealFormWrapper />
+        </Suspense>
+      }
       recentMealsSlot={
         <Suspense fallback={
           <Card style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
@@ -18,6 +26,16 @@ export default async function DashboardPage() {
           </Card>
         }>
           <RecentMeals />
+        </Suspense>
+      }
+      householdSlot={
+        <Suspense fallback={<SkeletonCard />}>
+          <HouseholdPanel />
+        </Suspense>
+      }
+      sharedMealLogSlot={
+        <Suspense fallback={<SkeletonCard />}>
+          <SharedMealLog />
         </Suspense>
       }
       recommendationSlot={

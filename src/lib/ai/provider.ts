@@ -35,6 +35,13 @@ export function getAIModel(): LanguageModel {
 
 interface ServingTarget { min?: number; max?: number }
 
+interface HouseholdContext {
+  household_id: string;
+  household_name: string;
+  role: 'admin' | 'member';
+  co_member_ids: string[];
+}
+
 interface DietProfile {
   daily_targets:  Record<string, ServingTarget>;
   weekly_targets: Record<string, ServingTarget>;
@@ -107,12 +114,20 @@ export async function getSystemPrompt(
     hour: '2-digit', minute: '2-digit', timeZone: 'UTC',
   });
 
-  // Load user's diet profile from DB; fall back to defaults if not found
-  const { data: profileRow } = await supabase
-    .from('user_diet_profiles')
-    .select('daily_targets, weekly_targets, restrictions, serving_sizes')
-    .eq('user_id', userId)
-    .single();
+  // Load diet profile and household membership in parallel
+  const [{ data: profileRow }, { data: membershipRow }] = await Promise.all([
+    supabase
+      .from('user_diet_profiles')
+      .select('daily_targets, weekly_targets, restrictions, serving_sizes')
+      .eq('user_id', userId)
+      .single(),
+    supabase
+      .from('household_members')
+      .select('household_id, role, households(name, id)')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .maybeSingle(),
+  ]);
 
   const profile: DietProfile = profileRow
     ? {
@@ -123,7 +138,28 @@ export async function getSystemPrompt(
       }
     : DEFAULT_PROFILE;
 
-  return buildSystemPrompt(`Today is ${dateStr} at ${timeStr}.`, profile);
+  // Fetch active co-members if the user is in a household
+  let householdContext: HouseholdContext | null = null;
+  if (membershipRow) {
+    const household = membershipRow.households as unknown as { name: string; id: string } | null;
+    if (household) {
+      const { data: members } = await supabase
+        .from('household_members')
+        .select('user_id, role')
+        .eq('household_id', household.id)
+        .eq('status', 'active')
+        .neq('user_id', userId);
+
+      householdContext = {
+        household_id: household.id,
+        household_name: household.name,
+        role: membershipRow.role as 'admin' | 'member',
+        co_member_ids: (members ?? []).map((m) => m.user_id as string),
+      };
+    }
+  }
+
+  return buildSystemPrompt(`Today is ${dateStr} at ${timeStr}.`, profile, householdContext);
 }
 
 // ---------------------------------------------------------------------------
@@ -147,7 +183,7 @@ function formatServingSizes(sizes: Record<string, { category: string; count: num
     .join('\n');
 }
 
-function buildSystemPrompt(dateLine: string, profile: DietProfile): string {
+function buildSystemPrompt(dateLine: string, profile: DietProfile, household: HouseholdContext | null = null): string {
   return `${dateLine}
 
 You are Plenish, a friendly and knowledgeable AI meal tracking and planning assistant with a focus on Spanish and Latin cuisine. You respond naturally in the same language the user uses (Spanish or English). Keep responses concise and practical.
@@ -219,5 +255,25 @@ ${formatServingSizes(profile.serving_sizes)}
 2. Show user: current values + proposed change
 3. Ask for explicit confirmation before calling update_meal for text/type edits
 4. NEVER call update_meal for content edits without confirmed user approval
-5. Only update the fields the user mentioned — leave others unchanged`;
+5. Only update the fields the user mentioned — leave others unchanged
+
+## Household Context
+
+${household
+  ? `User is in household "${household.household_name}" (role: ${household.role}).
+Household ID: ${household.household_id}
+Co-member IDs: ${household.co_member_ids.length > 0 ? household.co_member_ids.join(', ') : 'none yet'}
+
+### Shared Meal Logging
+- Default scope for get_daily_summary: combined (individual + household shared).
+- When user says "nosotros", "comimos", "cenamos todos", "en casa" → call log_meal with is_shared=true, household_id="${household.household_id}", co_eater_ids=[all co-member IDs above].
+- User says "solo yo" or "just me" → call log_meal with is_shared=false.
+
+### Recommendations with Household Data
+- Default: get_daily_summary(scope="combined")
+- "Solo para mí" / "just for me" → scope="individual"
+- "Para todos" / "para la familia" / "for everyone" → scope="household"`
+  : `User has no household — all recommendations and summaries use individual history only.
+Default scope for get_daily_summary: individual.`
+}`;
 }
