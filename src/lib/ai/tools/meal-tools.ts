@@ -316,11 +316,13 @@ export function createMealTools(tzOffsetMinutes: number) {
           .single();
 
         if (meal) {
-          updates.recipe_ids = [...(meal.recipe_ids ?? []), recipe_id];
-          // Also clear inferred_ingredients since a proper recipe is now linked
-          updates.inferred_ingredients = null;
-          if (meal.nutrition) {
-            updates.nutrition = { ...meal.nutrition, portion_confidence: 'from_recipe' };
+          const existing = meal.recipe_ids ?? [];
+          if (!existing.includes(recipe_id)) {
+            updates.recipe_ids = [...existing, recipe_id];
+            updates.inferred_ingredients = null;
+            if (meal.nutrition) {
+              updates.nutrition = { ...meal.nutrition, portion_confidence: 'from_recipe' };
+            }
           }
         }
       }
@@ -354,6 +356,10 @@ export function createMealTools(tzOffsetMinutes: number) {
             portion_confidence: 'stated',
           };
         }
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return { success: false, error: 'Meal not found or no fields to update.' };
       }
 
       const { error } = await supabase
