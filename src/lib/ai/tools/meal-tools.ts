@@ -2,31 +2,10 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-
-// ---------------------------------------------------------------------------
-// Shared schemas
-// ---------------------------------------------------------------------------
-
-const ServingCategoryEnum = z.enum([
-  'dairy', 'grains', 'fruit', 'vegetables', 'fish', 'meat', 'eggs', 'nuts', 'legumes',
-]);
-
-// Sparse servings: only non-zero categories are stored.
-const ServingsSchema = z.record(ServingCategoryEnum, z.number().int().min(1))
-  .describe('Sparse map — include only categories with count >= 1. Omit zeroes.');
-
-const NutritionSchema = z.object({
-  food_groups: z.array(z.enum(['vitaminas', 'proteinas', 'hidratos']))
-    .describe('Which of the three food groups this meal covers.'),
-  protein_type: z.enum(['white_meat', 'red_meat', 'fish_blue', 'fish_white', 'eggs', 'legumes'])
-    .nullable()
-    .describe('Primary protein type, or null if no protein.'),
-  servings: ServingsSchema,
-  has_occasional_food: z.boolean()
-    .describe('True if the meal contains occasional foods (sweets, cold cuts, sausages, etc.).'),
-  portion_confidence: z.enum(['from_recipe', 'stated', 'estimated'])
-    .describe('"stated" = user gave quantities; "estimated" = inferred from serving_sizes defaults; "from_recipe" = derived from linked recipe ingredients.'),
-});
+import {
+  ServingCategoryEnum,
+  NutritionSchema,
+} from '@/lib/ai/nutrition-schemas';
 
 // ---------------------------------------------------------------------------
 // createMealTools(tzOffsetMinutes)
@@ -40,7 +19,7 @@ export function createMealTools(tzOffsetMinutes: number) {
   // ---------------------------------------------------------------------------
   // Shared timezone helper — returns { rangeStart, rangeEnd } ISO strings
   // ---------------------------------------------------------------------------
-  function getDateRange(period: 'today' | 'yesterday' | 'week' | 'today_week') {
+  function getDateRange(period: 'today' | 'yesterday' | 'week') {
     const now = new Date();
     const offsetMs = tz * 60_000;
 
@@ -65,7 +44,7 @@ export function createMealTools(tzOffsetMinutes: number) {
       };
     }
 
-    // 'week' and 'today_week' — last 7 local days
+    // week — last 7 local days
     const weekStartMs = Date.UTC(
       localDate.getUTCFullYear(), localDate.getUTCMonth(), localDate.getUTCDate() - 7,
       0, 0, 0, 0,
@@ -199,7 +178,7 @@ export function createMealTools(tzOffsetMinutes: number) {
         .describe('Preparation steps if inferable. Empty array is acceptable.'),
       language: z.enum(['es', 'en']).default('es')
         .describe('Language of the recipe content. Match the language the user wrote in.'),
-      meal_id: z.string().uuid().optional()
+      meal_id: z.uuid().optional()
         .describe(
           'UUID of the meal_log to link this recipe to. ' +
           'When provided, recipe_ids on that meal is updated and inferred_ingredients is cleared.',
@@ -265,7 +244,7 @@ export function createMealTools(tzOffsetMinutes: number) {
       'you intend to delete (log_text + time) and received their explicit confirmation. ' +
       'Never guess the meal_id — always retrieve it via get_meals first.',
     inputSchema: z.object({
-      meal_id: z.string().uuid()
+      meal_id: z.uuid()
         .describe('UUID of the meal_log entry to delete. Must be obtained from get_meals.'),
     }),
     execute: async ({ meal_id }) => {
@@ -297,13 +276,13 @@ export function createMealTools(tzOffsetMinutes: number) {
       'Never guess the meal_id — always retrieve it via get_meals first. ' +
       'At least one field must be provided.',
     inputSchema: z.object({
-      meal_id: z.string().uuid()
+      meal_id: z.uuid()
         .describe('UUID of the meal_log entry to update. Must be obtained from get_meals or log_meal.'),
       log_text: z.string().min(1).max(500).optional()
         .describe('New description for the meal. Omit to keep unchanged.'),
       meal_type: z.enum(['breakfast', 'lunch', 'dinner', 'snack']).optional()
         .describe('New meal type. Omit to keep unchanged.'),
-      recipe_id: z.string().uuid().optional()
+      recipe_id: z.uuid().optional()
         .describe('Existing recipe UUID to link to this meal. Appended to recipe_ids.'),
       nutrition_patch: z.object({
         servings: z.record(ServingCategoryEnum, z.number().int().min(0)).optional()
@@ -408,29 +387,12 @@ export function createMealTools(tzOffsetMinutes: number) {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) return { error: 'Unauthorized' };
 
-      // Fetch diet profile (fall back to empty object — defaults are in the system prompt)
-      const { data: profile } = await supabase
-        .from('user_diet_profiles')
-        .select('daily_targets, weekly_targets, restrictions')
-        .eq('user_id', user.id)
-        .single();
-
-      const dailyTargets  = (profile?.daily_targets  ?? {}) as Record<string, { min?: number; max?: number }>;
-      const weeklyTargets = (profile?.weekly_targets ?? {}) as Record<string, { min?: number; max?: number }>;
-      const restrictions  = (profile?.restrictions   ?? {
-        no_repeat_hours: 48,
-        occasional_foods: [],
-        protein_rotation: [],
-      }) as { no_repeat_hours: number; occasional_foods: string[]; protein_rotation: string[] };
-
-      // Date ranges: always need today; for 'week' also fetch 7-day window
       const todayRange = getDateRange('today');
-      const weekRange  = getDateRange('week');
 
       const fetchMeals = async (rangeStart: string, rangeEnd: string) => {
         const { data } = await supabase
           .from('meal_logs')
-          .select('meal_type, nutrition')
+          .select('meal_type, nutrition, eaten_at')
           .eq('user_id', user.id)
           .gte('eaten_at', rangeStart)
           .lte('eaten_at', rangeEnd)
@@ -438,10 +400,33 @@ export function createMealTools(tzOffsetMinutes: number) {
         return data ?? [];
       };
 
-      const todayMeals = await fetchMeals(todayRange.rangeStart, todayRange.rangeEnd);
-      const weekMeals  = period === 'week'
-        ? await fetchMeals(weekRange.rangeStart, weekRange.rangeEnd)
-        : todayMeals;
+      // Fetch profile and meals in parallel.
+      // When period='week', fetch the full 7-day window; today's meals are derived
+      // by JS filtering to avoid a second DB call.
+      const weekRange = period === 'week' ? getDateRange('week') : null;
+      const [{ data: profileRow }, fetchedMeals] = await Promise.all([
+        supabase
+          .from('user_diet_profiles')
+          .select('daily_targets, weekly_targets, restrictions')
+          .eq('user_id', user.id)
+          .single(),
+        weekRange
+          ? fetchMeals(weekRange.rangeStart, weekRange.rangeEnd)
+          : fetchMeals(todayRange.rangeStart, todayRange.rangeEnd),
+      ]);
+
+      const weekMeals  = fetchedMeals;
+      const todayMeals = weekRange
+        ? fetchedMeals.filter(m => (m.eaten_at as string) >= todayRange.rangeStart)
+        : fetchedMeals;
+
+      const dailyTargets  = (profileRow?.daily_targets  ?? {}) as Record<string, { min?: number; max?: number }>;
+      const weeklyTargets = (profileRow?.weekly_targets ?? {}) as Record<string, { min?: number; max?: number }>;
+      const restrictions  = (profileRow?.restrictions   ?? {
+        no_repeat_hours: 48,
+        occasional_foods: [],
+        protein_rotation: [],
+      }) as { no_repeat_hours: number; occasional_foods: string[]; protein_rotation: string[] };
 
       // Aggregate sparse servings across a set of meals
       const aggregateServings = (meals: typeof todayMeals) => {

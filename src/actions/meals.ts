@@ -2,24 +2,9 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import type { MealNutrition } from '@/lib/ai/nutrition-schemas';
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
-
-export type ServingCategory =
-  | 'dairy' | 'grains' | 'fruit' | 'vegetables'
-  | 'fish'  | 'meat'   | 'eggs'  | 'nuts' | 'legumes';
-
-export interface MealNutrition {
-  food_groups: ('vitaminas' | 'proteinas' | 'hidratos')[];
-  protein_type:
-    | 'white_meat' | 'red_meat' | 'fish_blue' | 'fish_white'
-    | 'eggs' | 'legumes'
-    | null;
-  /** Sparse — only categories with count >= 1 are present. */
-  servings: Partial<Record<ServingCategory, number>>;
-  has_occasional_food: boolean;
-  portion_confidence: 'from_recipe' | 'stated' | 'estimated';
-}
 
 export interface MealLog {
   id: string;
