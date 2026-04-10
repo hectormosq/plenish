@@ -86,6 +86,29 @@ export async function logMeal(
   return { success: true, meal: data, participants };
 }
 
+export async function getWeekMeals(): Promise<MealLog[]> {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) return [];
+
+  // Fetch 8 days to cover any UTC/local timezone offset; client filters to current week
+  const since = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
+    .from('meal_logs')
+    .select('*')
+    .eq('user_id', user.id)
+    .gte('eaten_at', since)
+    .order('eaten_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching week meals:', error);
+    return [];
+  }
+
+  return data as MealLog[];
+}
+
 export async function getRecentMeals(): Promise<MealLog[]> {
   const supabase = await createClient();
   
