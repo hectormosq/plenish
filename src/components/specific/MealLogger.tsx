@@ -105,9 +105,9 @@ const MealTypeChip = styled.button<{ $active: boolean }>`
   transition: all 0.2s ease;
   font-family: inherit;
 
-  &:hover {
+  &:hover:not(:disabled) {
     border-color: #3b82f6;
-    color: #3b82f6;
+    color: ${({ $active }) => ($active ? '#fff' : '#3b82f6')};
   }
 
   &:disabled {
