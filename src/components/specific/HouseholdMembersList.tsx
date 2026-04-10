@@ -3,9 +3,9 @@
 import React, { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
-import { inviteToHousehold, removeMember, leaveHousehold } from '@/actions/households';
+import { inviteToHousehold, removeMember, leaveHousehold, cancelInvitation } from '@/actions/households';
 import type { HouseholdWithMembers } from '@/actions/households';
-import { UserPlus, UserMinus, LogOut, Crown, User } from 'lucide-react';
+import { UserPlus, UserMinus, LogOut, Crown, User, X } from 'lucide-react';
 
 // ─── Styled Components ────────────────────────────────────────────────────────
 
@@ -181,6 +181,18 @@ export function HouseholdMembersList({ household }: Props) {
     });
   };
 
+  const handleCancelInvitation = (memberId: string) => {
+    if (!confirm('Cancel this invitation?')) return;
+    startTransition(async () => {
+      try {
+        await cancelInvitation(household.id, memberId);
+        router.refresh();
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    });
+  };
+
   const handleLeave = () => {
     if (!confirm(`Leave "${household.name}"? This cannot be undone.`)) return;
     startTransition(async () => {
@@ -206,7 +218,16 @@ export function HouseholdMembersList({ household }: Props) {
               <RoleBadge $isAdmin={member.role === 'admin'}>{member.role}</RoleBadge>
               {member.status === 'pending' && <StatusBadge>pending</StatusBadge>}
             </MemberInfo>
-            {currentUserIsAdmin && member.status !== 'pending' && member.role !== 'admin' && (
+            {currentUserIsAdmin && member.status === 'pending' && (
+              <IconButton
+                onClick={() => handleCancelInvitation(member.id)}
+                disabled={isPending}
+                title="Cancel invitation"
+              >
+                <X size={15} />
+              </IconButton>
+            )}
+            {currentUserIsAdmin && member.status === 'active' && member.role !== 'admin' && (
               <IconButton
                 onClick={() => member.user_id && handleRemove(member.user_id)}
                 disabled={isPending}

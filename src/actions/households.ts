@@ -229,6 +229,29 @@ export async function removeMember(
   return { success: true };
 }
 
+export async function cancelInvitation(
+  householdId: string,
+  memberId: string,
+): Promise<{ success: true }> {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) throw new Error('Unauthorized');
+
+  await assertIsAdmin(supabase, householdId, user.id, 'Only household admins can cancel invitations.');
+
+  const { error } = await supabase
+    .from('household_members')
+    .delete()
+    .eq('id', memberId)
+    .eq('household_id', householdId)
+    .eq('status', 'pending');
+
+  if (error) throw new Error('Failed to cancel invitation.');
+
+  revalidatePath('/dashboard');
+  return { success: true };
+}
+
 export async function getHousehold(): Promise<HouseholdWithMembers | null> {
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -243,17 +266,24 @@ export async function getHousehold(): Promise<HouseholdWithMembers | null> {
 
   if (!membership) return null;
 
+  const isAdmin = membership.role === 'admin';
+
+  const membersQuery = supabase
+    .from('household_members')
+    .select('*, users(email)')
+    .eq('household_id', membership.household_id)
+    .order('created_at', { ascending: true });
+
+  // Non-admins only see active members — pending invitees are hidden from them
+  if (!isAdmin) membersQuery.eq('status', 'active');
+
   const [householdResult, membersResult] = await Promise.all([
     supabase
       .from('households')
       .select('*')
       .eq('id', membership.household_id)
       .single(),
-    supabase
-      .from('household_members')
-      .select('*, users(email)')
-      .eq('household_id', membership.household_id)
-      .order('created_at', { ascending: true }),
+    membersQuery,
   ]);
 
   if (householdResult.error || !householdResult.data) return null;
@@ -282,12 +312,27 @@ export async function getPendingInvitations(): Promise<PendingInvitation[]> {
     .or(`user_id.eq.${user.id},invited_email.eq.${user.email ?? ''}`)
     .order('created_at', { ascending: true });
 
-  if (!data) return [];
+  if (!data || data.length === 0) return [];
+
+  const householdIds = data.map((row) => row.household_id as string);
+
+  const { data: adminRows } = await supabase
+    .from('household_members')
+    .select('household_id, users(email)')
+    .in('household_id', householdIds)
+    .eq('role', 'admin')
+    .eq('status', 'active');
+
+  const adminByHousehold = new Map<string, string>();
+  for (const row of adminRows ?? []) {
+    const email = (row as { users?: { email?: string } }).users?.email;
+    if (email) adminByHousehold.set(row.household_id as string, email);
+  }
 
   return data.map((row) => ({
     household_id: row.household_id as string,
     household_name: (row as { households?: { name?: string } }).households?.name ?? 'Unknown Household',
-    invited_by: '',           // Enriched in UI if needed; admin name not stored on the row
+    invited_by: adminByHousehold.get(row.household_id as string) ?? '',
     created_at: row.created_at as string,
   }));
 }
