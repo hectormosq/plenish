@@ -14,7 +14,7 @@ export default async function DashboardPage() {
   
   return (
     <DashboardLayout
-      logMealFormSlot={
+      mealLoggerSlot={
         <Suspense fallback={<SkeletonCard />}>
           <LogMealFormWrapper />
         </Suspense>

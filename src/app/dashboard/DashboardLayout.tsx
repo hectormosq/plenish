@@ -100,7 +100,7 @@ const LeftColumn = styled.div`
   gap: 2rem;
 `;
 
-export function DashboardLayout({ recentMealsSlot, recommendationSlot, householdSlot, logMealFormSlot, sharedMealLogSlot }: { recentMealsSlot: ReactNode; recommendationSlot: ReactNode; householdSlot?: ReactNode; logMealFormSlot?: ReactNode; sharedMealLogSlot?: ReactNode }) {
+export function DashboardLayout({ recentMealsSlot, recommendationSlot, householdSlot, mealLoggerSlot, sharedMealLogSlot }: { recentMealsSlot: ReactNode; recommendationSlot: ReactNode; householdSlot?: ReactNode; mealLoggerSlot?: ReactNode; sharedMealLogSlot?: ReactNode }) {
   const router = useRouter();
 
   async function handleSignOut() {
@@ -127,7 +127,7 @@ export function DashboardLayout({ recentMealsSlot, recommendationSlot, household
         {/* Left Column — Primary AI Interaction & Forms */}
         <LeftColumn>
           <AIChatBox />
-          {logMealFormSlot}
+          {mealLoggerSlot}
         </LeftColumn>
 
         {/* Right Column — Context & Progress */}
