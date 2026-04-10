@@ -92,6 +92,40 @@ const ChipSeparator = styled.span`
   padding: 0 0.25rem;
 `;
 
+const DateChip = styled.button<{ $active: boolean }>`
+  background: ${({ $active }) => ($active ? 'rgba(168, 85, 247, 0.15)' : 'transparent')};
+  border: 1px solid ${({ $active }) => ($active ? '#a855f7' : '#333')};
+  color: ${({ $active }) => ($active ? '#d8b4fe' : '#999')};
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+
+  &:hover:not(:disabled) {
+    border-color: #a855f7;
+    color: #d8b4fe;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const HiddenDateInput = styled.input`
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+`;
+
 const MealTypeChip = styled.button<{ $active: boolean }>`
   background: ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
   border: 1px solid ${({ $active }) => ($active ? '#3b82f6' : '#333')};
@@ -233,6 +267,7 @@ export function MealLogger({
   });
   const isLoading = status === 'streaming' || status === 'submitted';
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -240,10 +275,28 @@ export function MealLogger({
 
   const [localInput, setLocalInput] = useState('');
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(null);
+  // null = let AI infer from text; YYYY-MM-DD string = explicit date
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [shareState, setShareState] = useState<'just-me' | 'all' | 'partial'>('all');
   const [selectedCoEaters, setSelectedCoEaters] = useState<Set<string>>(
     new Set(householdMembers.map((m) => m.user_id))
   );
+
+  // ─── Date helpers ────────────────────────────────────────────────
+
+  const todayISO = (): string => new Date().toISOString().split('T')[0];
+  const yesterdayISO = (): string =>
+    new Date(Date.now() - 86_400_000).toISOString().split('T')[0];
+
+  const getDateLabel = (date: string | null): string => {
+    if (!date || date === todayISO()) return 'Today';
+    if (date === yesterdayISO()) return 'Yesterday';
+    // e.g. "Apr 9"
+    return new Date(`${date}T12:00:00`).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    });
+  };
 
   // ─── Event Handlers ─────────────────────────────────────────────
 
@@ -251,21 +304,33 @@ export function MealLogger({
     e.preventDefault();
     if (!localInput.trim()) return;
 
-    // Always route through AI — it handles date parsing ("ayer", "yesterday",
-    // "hace 2 días") via the eaten_at field in the log_meal tool.
-    // If a chip is selected, prefix the meal type so the AI uses it as-is
-    // rather than inferring from time of day.
-    const text = selectedMealType
-      ? `[${selectedMealType}] ${localInput}`
-      : localInput;
+    // Build prefixes so the AI has explicit context. If absent, the AI
+    // parses natural language ("ayer", "yesterday") or asks the user.
+    const parts: string[] = [];
+    if (selectedDate && selectedDate !== todayISO()) {
+      parts.push(`[date: ${selectedDate}]`);
+    }
+    if (selectedMealType) {
+      parts.push(`[${selectedMealType}]`);
+    }
+    const text = parts.length > 0 ? `${parts.join(' ')} ${localInput}` : localInput;
 
     sendMessage({ text });
     setLocalInput('');
     setSelectedMealType(null);
+    setSelectedDate(null);
   };
 
   const handleChipClick = (type: MealType) => {
     setSelectedMealType((prev) => (prev === type ? null : type));
+  };
+
+  const handleDateChipClick = () => {
+    dateInputRef.current?.showPicker();
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedDate(e.target.value || null);
   };
 
   const handleShareClick = () => {
@@ -340,8 +405,31 @@ export function MealLogger({
         <div ref={endOfMessagesRef} />
       </MessageList>
 
-      {/* Meal Type Chips + Share Selector */}
+      {/* Date + Meal Type Chips + Share Selector */}
       <ChipRow>
+        {/* Date chip — clicking opens native calendar */}
+        <div style={{ position: 'relative' }}>
+          <DateChip
+            type="button"
+            $active={selectedDate !== null && selectedDate !== todayISO()}
+            onClick={handleDateChipClick}
+            disabled={isLoading}
+            title="Select meal date"
+          >
+            📅 {getDateLabel(selectedDate)}
+          </DateChip>
+          <HiddenDateInput
+            ref={dateInputRef}
+            type="date"
+            value={selectedDate ?? todayISO()}
+            max={todayISO()}
+            onChange={handleDateChange}
+            tabIndex={-1}
+          />
+        </div>
+
+        <ChipSeparator>|</ChipSeparator>
+
         {MEAL_TYPES.map((type) => (
           <MealTypeChip
             key={type}
@@ -349,7 +437,7 @@ export function MealLogger({
             onClick={() => handleChipClick(type)}
             disabled={isLoading}
             type="button"
-            title={selectedMealType === type ? 'Click to deselect (switch to chat)' : `Log as ${type}`}
+            title={selectedMealType === type ? 'Click to deselect' : `Log as ${type}`}
           >
             {type.charAt(0).toUpperCase() + type.slice(1)}
             {selectedMealType === type && <X size={12} style={{ marginLeft: '4px' }} />}
