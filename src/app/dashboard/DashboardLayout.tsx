@@ -99,7 +99,7 @@ const LeftColumn = styled.div`
   gap: 2rem;
 `;
 
-export function DashboardLayout({ recentMealsSlot, recommendationSlot, householdSlot, mealLoggerSlot, sharedMealLogSlot }: { recentMealsSlot: ReactNode; recommendationSlot: ReactNode; householdSlot?: ReactNode; mealLoggerSlot?: ReactNode; sharedMealLogSlot?: ReactNode }) {
+export function DashboardLayout({ calendarSlot, recommendationSlot, householdSlot, mealLoggerSlot }: { calendarSlot: ReactNode; recommendationSlot: ReactNode; householdSlot?: ReactNode; mealLoggerSlot?: ReactNode }) {
   const router = useRouter();
 
   async function handleSignOut() {
@@ -128,11 +128,10 @@ export function DashboardLayout({ recentMealsSlot, recommendationSlot, household
           {mealLoggerSlot}
         </LeftColumn>
 
-        {/* Right Column — Context & Progress */}
+        {/* Right Column — Calendar + Context */}
         <RightColumn>
-          {recentMealsSlot}
+          {calendarSlot}
           {householdSlot}
-          {sharedMealLogSlot}
           {recommendationSlot}
         </RightColumn>
       </PageContent>
