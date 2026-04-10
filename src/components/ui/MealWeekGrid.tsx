@@ -4,7 +4,8 @@ import React, { useState, useTransition, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import { deleteMeal, dismissSharedMeal, type MealType } from '@/actions/meals';
-import { Trash2, EyeOff, Clock } from 'lucide-react';
+import { getCalendarMeals } from '@/actions/calendar';
+import { Trash2, EyeOff, Clock, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,11 +47,11 @@ const MEAL_BG: Record<MealType, string> = {
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
-function getWeekDays(): Date[] {
+function getWeekDays(offset: number = 0): Date[] {
   const today = new Date();
   const dow = today.getDay(); // 0 = Sun
   const monday = new Date(today);
-  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1) + offset * 7);
   monday.setHours(0, 0, 0, 0);
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
@@ -81,6 +82,14 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 }
 
+function getWeekLabel(weekDays: Date[], offset: number): string {
+  if (offset === 0) return 'This Week';
+  if (offset === -1) return 'Last Week';
+  const start = weekDays[0].toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const end = weekDays[6].toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return `${start} – ${end}`;
+}
+
 // ─── Styled Components ────────────────────────────────────────────────────────
 
 const Wrapper = styled.div`
@@ -93,7 +102,7 @@ const Wrapper = styled.div`
 `;
 
 const Title = styled.div`
-  padding: 1rem 1.25rem 0.75rem;
+  padding: 0.75rem 1rem;
   font-size: 0.875rem;
   font-weight: 600;
   color: #9ca3af;
@@ -103,10 +112,44 @@ const Title = styled.div`
   gap: 0.5rem;
 `;
 
+const WeekLabel = styled.span`
+  flex: 1;
+  font-size: 0.8rem;
+  color: #9ca3af;
+`;
+
+const NavButton = styled.button`
+  background: transparent;
+  border: 1px solid #2a2a2a;
+  color: #6b7280;
+  border-radius: 6px;
+  padding: 0.2rem 0.4rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.15s;
+
+  &:hover:not(:disabled) {
+    color: #d1d5db;
+    border-color: #3a3a3a;
+    background: rgba(255,255,255,0.04);
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+`;
+
+const LoadingText = styled.span`
+  font-size: 0.7rem;
+  color: #4b5563;
+`;
+
 const Grid = styled.div`
   display: grid;
-  grid-template-columns: 72px repeat(7, minmax(96px, 1fr));
-  min-width: 750px;
+  grid-template-columns: 88px repeat(7, minmax(96px, 1fr));
+  min-width: 780px;
 `;
 
 const CornerCell = styled.div`
@@ -162,12 +205,6 @@ const Cell = styled.div<{ $today: boolean; $filled: boolean; $bg: string }>`
   background: ${({ $filled, $bg, $today }) =>
     $filled ? $bg : $today ? 'rgba(59,130,246,0.025)' : 'transparent'};
   transition: background 0.12s;
-
-  ${({ $filled, $today }) =>
-    $filled &&
-    `&:hover {
-      background: ${$today ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.03)'};
-    }`}
 `;
 
 const Ghost = styled.span`
@@ -186,6 +223,7 @@ const CellBody = styled.div`
   flex-direction: column;
   height: 100%;
   gap: 0.2rem;
+  padding-right: 1rem;
 `;
 
 const CellText = styled.p`
@@ -209,6 +247,27 @@ const CellFooter = styled.div`
 const ExtraCount = styled.span`
   font-size: 0.6rem;
   color: #4b5563;
+`;
+
+const InfoButton = styled.button`
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: transparent;
+  border: none;
+  color: #2e2e2e;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.12s, background 0.12s;
+
+  &:hover {
+    color: #6b7280;
+    background: rgba(255, 255, 255, 0.06);
+  }
 `;
 
 // ─── Tooltip (fixed position, rendered at root of component) ─────────────────
@@ -286,11 +345,27 @@ interface TooltipState {
   y: number;
 }
 
-export function MealWeekGrid({ meals }: { meals: CalendarMeal[] }) {
+export function MealWeekGrid({ meals: initialMeals, daysBack: initialDaysBack = 35 }: { meals: CalendarMeal[]; daysBack?: number }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
-  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [allMeals, setAllMeals] = useState<CalendarMeal[]>(initialMeals);
+  const [loadedDaysBack, setLoadedDaysBack] = useState(initialDaysBack);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  // Close tooltip on click outside
+  useEffect(() => {
+    if (!tooltip) return;
+    const handler = (e: MouseEvent) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(e.target as Node)) {
+        setTooltip(null);
+      }
+    };
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [tooltip]);
 
   // Close tooltip on scroll
   useEffect(() => {
@@ -299,29 +374,42 @@ export function MealWeekGrid({ meals }: { meals: CalendarMeal[] }) {
     return () => window.removeEventListener('scroll', close, true);
   }, []);
 
-  const weekDays = getWeekDays();
+  const weekDays = getWeekDays(weekOffset);
   const todayKey = toDayKey(new Date());
 
-  // Group meals by "YYYY-MM-DD-mealtype"
-  const bySlot = new Map<string, CalendarMeal[]>();
-  for (const meal of meals) {
-    const key = `${toLocalDayKey(meal.eaten_at)}-${meal.meal_type}`;
-    if (!bySlot.has(key)) bySlot.set(key, []);
-    bySlot.get(key)!.push(meal);
-  }
+  // Determine how many days back the Monday of the viewed week is
+  const mondayOfView = weekDays[0];
+  const daysUntilMonday = Math.ceil((Date.now() - mondayOfView.getTime()) / (1000 * 60 * 60 * 24));
 
-  const showTooltip = (e: React.MouseEvent, meal: CalendarMeal) => {
-    if (leaveTimer.current) clearTimeout(leaveTimer.current);
+  const handlePrevWeek = async () => {
+    const newOffset = weekOffset - 1;
+    const newMonday = getWeekDays(newOffset)[0];
+    const daysNeeded = Math.ceil((Date.now() - newMonday.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+    if (daysNeeded > loadedDaysBack) {
+      setIsLoadingMore(true);
+      const newDaysBack = loadedDaysBack + 28;
+      const moreMeals = await getCalendarMeals(newDaysBack);
+      setAllMeals(moreMeals);
+      setLoadedDaysBack(newDaysBack);
+      setIsLoadingMore(false);
+    }
+
+    setWeekOffset(newOffset);
+  };
+
+  const handleNextWeek = () => {
+    if (weekOffset < 0) setWeekOffset((o) => o + 1);
+  };
+
+  const handleInfoClick = (e: React.MouseEvent, meal: CalendarMeal) => {
+    e.stopPropagation();
+    if (tooltip?.meal.id === meal.id) {
+      setTooltip(null);
+      return;
+    }
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setTooltip({ meal, x: rect.left + rect.width / 2, y: rect.top - 6 });
-  };
-
-  const hideTooltip = () => {
-    leaveTimer.current = setTimeout(() => setTooltip(null), 120);
-  };
-
-  const keepTooltip = () => {
-    if (leaveTimer.current) clearTimeout(leaveTimer.current);
   };
 
   const handleDelete = (id: string) => {
@@ -340,10 +428,25 @@ export function MealWeekGrid({ meals }: { meals: CalendarMeal[] }) {
     });
   };
 
+  // Group meals by "YYYY-MM-DD-mealtype"
+  const bySlot = new Map<string, CalendarMeal[]>();
+  for (const meal of allMeals) {
+    const key = `${toLocalDayKey(meal.eaten_at)}-${meal.meal_type}`;
+    if (!bySlot.has(key)) bySlot.set(key, []);
+    bySlot.get(key)!.push(meal);
+  }
+
   return (
     <Wrapper>
       <Title>
-        <span style={{ color: '#3b82f6' }}>📅</span> This Week
+        <NavButton onClick={handlePrevWeek} disabled={isLoadingMore} title="Previous week">
+          <ChevronLeft size={13} />
+        </NavButton>
+        <span style={{ color: '#3b82f6', fontSize: '0.875rem' }}>📅</span>
+        <WeekLabel>{isLoadingMore ? <LoadingText>Loading…</LoadingText> : getWeekLabel(weekDays, weekOffset)}</WeekLabel>
+        <NavButton onClick={handleNextWeek} disabled={weekOffset >= 0} title="Next week">
+          <ChevronRight size={13} />
+        </NavButton>
       </Title>
 
       <Grid>
@@ -384,14 +487,7 @@ export function MealWeekGrid({ meals }: { meals: CalendarMeal[] }) {
               const coEaters = (primary.meal_participants ?? []).filter((p) => !p.dismissed);
 
               return (
-                <Cell
-                  key={dayKey}
-                  $today={isToday}
-                  $filled
-                  $bg={MEAL_BG[mealType]}
-                  onMouseEnter={(e) => showTooltip(e, primary)}
-                  onMouseLeave={hideTooltip}
-                >
+                <Cell key={dayKey} $today={isToday} $filled $bg={MEAL_BG[mealType]}>
                   <CellBody>
                     <CellText>{primary.log_text}</CellText>
                     <CellFooter>
@@ -406,6 +502,12 @@ export function MealWeekGrid({ meals }: { meals: CalendarMeal[] }) {
                       {slot.length > 1 && <ExtraCount>+{slot.length - 1}</ExtraCount>}
                     </CellFooter>
                   </CellBody>
+                  <InfoButton
+                    onClick={(e) => handleInfoClick(e, primary)}
+                    title="Meal details"
+                  >
+                    <Info size={10} />
+                  </InfoButton>
                 </Cell>
               );
             })}
@@ -413,13 +515,12 @@ export function MealWeekGrid({ meals }: { meals: CalendarMeal[] }) {
         ))}
       </Grid>
 
-      {/* Tooltip rendered at component root with fixed position */}
+      {/* Tooltip — click-triggered, fixed position */}
       {tooltip && (
         <TooltipPortal
+          ref={tooltipRef}
           $x={tooltip.x}
           $y={tooltip.y}
-          onMouseEnter={keepTooltip}
-          onMouseLeave={hideTooltip}
         >
           <TipText>{tooltip.meal.log_text}</TipText>
           <TipMeta>
