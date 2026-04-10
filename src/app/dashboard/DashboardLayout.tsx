@@ -73,30 +73,30 @@ const SignOutButton = styled.button`
 
 const PageContent = styled.main`
   flex: 1;
-  padding: 2rem;
-  max-width: 1400px;
+  padding: 1.25rem 1.5rem;
+  max-width: 1600px;
   width: 100%;
   margin: 0 auto;
   display: grid;
-  gap: 2rem;
+  gap: 1.5rem;
   grid-template-columns: 1fr;
   animation: ${fadeIn} 0.4s ease 0.1s both;
 
   @media (min-width: 1024px) {
-    grid-template-columns: 60% 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
   }
 `;
 
 const RightColumn = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
 `;
 
 const LeftColumn = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
 `;
 
 export function DashboardLayout({ calendarSlot, recommendationSlot, householdSlot, mealLoggerSlot }: { calendarSlot: ReactNode; recommendationSlot: ReactNode; householdSlot?: ReactNode; mealLoggerSlot?: ReactNode }) {

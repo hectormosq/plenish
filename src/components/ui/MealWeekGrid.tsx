@@ -148,8 +148,8 @@ const LoadingText = styled.span`
 
 const Grid = styled.div`
   display: grid;
-  grid-template-columns: 88px repeat(7, minmax(96px, 1fr));
-  min-width: 780px;
+  grid-template-columns: 88px repeat(7, minmax(80px, 1fr));
+  min-width: 660px;
 `;
 
 const CornerCell = styled.div`
