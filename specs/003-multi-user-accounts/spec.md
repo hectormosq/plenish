@@ -152,3 +152,8 @@ The recommendation system considers both a user's individual meal history and th
 - The recommendation engine uses the combined household history by default, but this default can be overridden per-request through a natural language qualifier (e.g., "just for me" vs. "for all of us").
 - Household membership role hierarchy is simple: admin (can invite/remove members) and member (can log/view shared meals). A household has exactly one admin at a time.
 - If the household admin leaves or is removed, admin rights automatically transfer to the longest-standing active member.
+
+## Amend
+- Admin user can delete / discard an invitation to other member to the household
+- Invited members to a household see the admin as unknown. It should appear the name of the admin on the list
+- Invited member should not see pending invited members
