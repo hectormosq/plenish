@@ -250,10 +250,10 @@ export function MealLogger({
   // null = no chip selected (chat mode); set = meal log mode
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(null);
   const [shareState, setShareState] = useState<'just-me' | 'all' | 'partial'>(
-    'just-me'
+    'all'
   );
   const [selectedCoEaters, setSelectedCoEaters] = useState<Set<string>>(
-    new Set()
+    new Set(householdMembers.map((m) => m.user_id))
   );
 
   // ─── Event Handlers ─────────────────────────────────────────────
