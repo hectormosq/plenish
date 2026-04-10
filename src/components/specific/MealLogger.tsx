@@ -8,7 +8,7 @@ import type { UIMessage } from 'ai';
 import styled, { keyframes } from 'styled-components';
 import { logMeal, MealType } from '@/actions/meals';
 import type { HouseholdMemberSimple } from '@/actions/households';
-import { MessageSquare, Send, Users, Loader2, X } from 'lucide-react';
+import { MessageSquare, Send, Loader2, X } from 'lucide-react';
 
 // ─── Styled Components (from AIChatBox) ────────────────────────────────────
 
@@ -80,9 +80,17 @@ const MessageBubble = styled.div<{ $role: 'user' | 'assistant' }>`
 
 const ChipRow = styled.div`
   display: flex;
+  align-items: center;
   gap: 0.5rem;
   padding: 1rem 0 0.5rem 0;
   flex-wrap: wrap;
+`;
+
+const ChipSeparator = styled.span`
+  color: #444;
+  font-size: 1rem;
+  user-select: none;
+  padding: 0 0.25rem;
 `;
 
 const MealTypeChip = styled.button<{ $active: boolean }>`
@@ -184,17 +192,16 @@ const ShareButton = styled.button<{ $state: 'just-me' | 'all' | 'partial' }>`
     $state === 'just-me' ? 'transparent' : 'rgba(59, 130, 246, 0.15)'};
   border: 1px solid ${({ $state }) => ($state === 'just-me' ? '#333' : '#3b82f6')};
   color: ${({ $state }) => ($state === 'just-me' ? '#999' : '#93c5fd')};
-  border-radius: 8px;
-  padding: 0.5rem 0.875rem;
-  font-size: 0.8rem;
+  border-radius: 20px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   font-family: inherit;
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  flex-shrink: 0;
 
   &:hover {
     border-color: #3b82f6;
@@ -363,7 +370,7 @@ export function MealLogger({
         <div ref={endOfMessagesRef} />
       </MessageList>
 
-      {/* Meal Type Chips */}
+      {/* Meal Type Chips + Share Selector */}
       <ChipRow>
         {MEAL_TYPES.map((type) => (
           <MealTypeChip
@@ -378,6 +385,21 @@ export function MealLogger({
             {selectedMealType === type && <X size={12} style={{ marginLeft: '4px' }} />}
           </MealTypeChip>
         ))}
+
+        {householdMembers.length > 0 && (
+          <>
+            <ChipSeparator>|</ChipSeparator>
+            <ShareButton
+              type="button"
+              $state={shareState}
+              onClick={handleShareClick}
+              disabled={isPending || isLoading}
+              title="Who sees this meal?"
+            >
+              {shareState === 'just-me' ? '👤 Just me' : shareState === 'all' ? '👥 All' : '👥 Partial'}
+            </ShareButton>
+          </>
+        )}
       </ChipRow>
 
       {/* Input Form */}
@@ -392,20 +414,6 @@ export function MealLogger({
           }
           disabled={isPending || isLoading}
         />
-
-        {/* Share Button (visible if household exists and in meal log mode) */}
-        {householdMembers.length > 0 && selectedMealType && (
-          <ShareButton
-            type="button"
-            $state={shareState}
-            onClick={handleShareClick}
-            disabled={isPending || isLoading}
-            title="Click to change sharing preference"
-          >
-            <Users size={13} />
-            {shareState === 'just-me' ? 'Just me' : 'Shared'}
-          </ShareButton>
-        )}
 
         {/* Send Button */}
         <SendButton
