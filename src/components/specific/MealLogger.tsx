@@ -1,0 +1,491 @@
+'use client';
+
+import React, { useState, useRef, useEffect } from 'react';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
+import type { UIMessage } from 'ai';
+import styled, { keyframes } from 'styled-components';
+import type { MealType } from '@/actions/meals';
+import type { HouseholdMemberSimple } from '@/actions/households';
+import { MessageSquare, Send, Loader2, X } from 'lucide-react';
+
+// ─── Styled Components (from AIChatBox) ────────────────────────────────────
+
+const ChatContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 600px;
+  background-color: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+`;
+
+const HeaderRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #333;
+  margin-bottom: 1rem;
+`;
+
+const MessageList = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-right: 0.5rem;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+  }
+`;
+
+const MessageBubble = styled.div<{ $role: 'user' | 'assistant' }>`
+  max-width: 80%;
+  padding: 1rem;
+  border-radius: 12px;
+  line-height: 1.5;
+  font-size: 0.95rem;
+
+  ${(props) =>
+    props.$role === 'user'
+      ? `
+      align-self: flex-end;
+      background-color: #3b82f6;
+      color: white;
+      border-bottom-right-radius: 2px;
+    `
+      : `
+      align-self: flex-start;
+      background-color: #2a2a2a;
+      border: 1px solid #444;
+      color: #e5e5e5;
+      border-bottom-left-radius: 2px;
+    `}
+`;
+
+// ─── NEW: Meal Type Chips ──────────────────────────────────────────────────
+
+const ChipRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 0 0.5rem 0;
+  flex-wrap: wrap;
+`;
+
+const ChipSeparator = styled.span`
+  color: #444;
+  font-size: 1rem;
+  user-select: none;
+  padding: 0 0.25rem;
+`;
+
+const DateChip = styled.button<{ $active: boolean }>`
+  background: ${({ $active }) => ($active ? 'rgba(168, 85, 247, 0.15)' : 'transparent')};
+  border: 1px solid ${({ $active }) => ($active ? '#a855f7' : '#333')};
+  color: ${({ $active }) => ($active ? '#d8b4fe' : '#999')};
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+
+  &:hover:not(:disabled) {
+    border-color: #a855f7;
+    color: #d8b4fe;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const HiddenDateInput = styled.input`
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+`;
+
+const MealTypeChip = styled.button<{ $active: boolean }>`
+  background: ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
+  border: 1px solid ${({ $active }) => ($active ? '#3b82f6' : '#333')};
+  color: ${({ $active }) => ($active ? '#fff' : '#999')};
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+
+  &:hover:not(:disabled) {
+    border-color: #3b82f6;
+    color: ${({ $active }) => ($active ? '#fff' : '#3b82f6')};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+// ─── Input Form Area ──────────────────────────────────────────────────────
+
+const InputForm = styled.form`
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  align-items: center;
+`;
+
+const ChatInput = styled.input`
+  flex: 1;
+  background-color: #222;
+  border: 1px solid #444;
+  color: #fff;
+  padding: 1rem;
+  border-radius: 9999px;
+  outline: none;
+  font-family: inherit;
+  font-size: 1rem;
+
+  &:focus {
+    border-color: #3b82f6;
+  }
+
+  &::placeholder {
+    color: #666;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const SendButton = styled.button`
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+  flex-shrink: 0;
+
+  &:hover:not(:disabled) {
+    background-color: #2563eb;
+    transform: scale(1.05);
+  }
+
+  &:disabled {
+    background-color: #444;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  svg.spinner {
+    animation: spin 1s linear infinite;
+  }
+`;
+
+const spin = keyframes`
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+`;
+
+// ─── NEW: 3-State Share Button (visual, logic in Phase 3) ────────────────
+
+const ShareButton = styled.button<{ $state: 'just-me' | 'all' | 'partial' }>`
+  background: ${({ $state }) =>
+    $state === 'just-me' ? 'transparent' : 'rgba(59, 130, 246, 0.15)'};
+  border: 1px solid ${({ $state }) => ($state === 'just-me' ? '#333' : '#3b82f6')};
+  color: ${({ $state }) => ($state === 'just-me' ? '#999' : '#93c5fd')};
+  border-radius: 20px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+
+  &:hover {
+    border-color: #3b82f6;
+    color: #93c5fd;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+`;
+
+// ─── Component ────────────────────────────────────────────────────────────
+
+interface MealLoggerProps {
+  householdMembers?: HouseholdMemberSimple[];
+  householdId?: string | null;
+}
+
+const MEAL_TYPES = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
+
+export function MealLogger({
+  householdMembers = [],
+  householdId = null,
+}: MealLoggerProps) {
+  const { messages, status, error, sendMessage } = useChat({
+    transport: new DefaultChatTransport({
+      body: { tzOffset: new Date().getTimezoneOffset() },
+    }),
+  });
+  const isLoading = status === 'streaming' || status === 'submitted';
+  const endOfMessagesRef = useRef<HTMLDivElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, error]);
+
+  const [localInput, setLocalInput] = useState('');
+  const [selectedMealType, setSelectedMealType] = useState<MealType | null>(null);
+  // null = let AI infer from text; YYYY-MM-DD string = explicit date
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [shareState, setShareState] = useState<'just-me' | 'all' | 'partial'>('all');
+  const [selectedCoEaters, setSelectedCoEaters] = useState<Set<string>>(
+    new Set(householdMembers.map((m) => m.user_id))
+  );
+
+  // ─── Date helpers ────────────────────────────────────────────────
+
+  const todayISO = (): string => new Date().toISOString().split('T')[0];
+  const yesterdayISO = (): string =>
+    new Date(Date.now() - 86_400_000).toISOString().split('T')[0];
+
+  const getDateLabel = (date: string | null): string => {
+    if (!date || date === todayISO()) return 'Today';
+    if (date === yesterdayISO()) return 'Yesterday';
+    // e.g. "Apr 9"
+    return new Date(`${date}T12:00:00`).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  // ─── Event Handlers ─────────────────────────────────────────────
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!localInput.trim()) return;
+
+    // Build prefixes so the AI has explicit context. If absent, the AI
+    // parses natural language ("ayer", "yesterday") or asks the user.
+    const parts: string[] = [];
+    if (selectedDate && selectedDate !== todayISO()) {
+      parts.push(`[date: ${selectedDate}]`);
+    }
+    if (selectedMealType) {
+      parts.push(`[${selectedMealType}]`);
+    }
+    const text = parts.length > 0 ? `${parts.join(' ')} ${localInput}` : localInput;
+
+    sendMessage({ text });
+    setLocalInput('');
+    setSelectedMealType(null);
+    setSelectedDate(null);
+  };
+
+  const handleChipClick = (type: MealType) => {
+    setSelectedMealType((prev) => (prev === type ? null : type));
+  };
+
+  const handleDateChipClick = () => {
+    dateInputRef.current?.showPicker();
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedDate(e.target.value || null);
+  };
+
+  const handleShareClick = () => {
+    // Phase 1: Simple cycling (just-me → all → just-me)
+    // Phase 3: Add member picker popover
+    if (shareState === 'just-me') {
+      setShareState('all');
+      setSelectedCoEaters(new Set(householdMembers.map((m) => m.user_id)));
+    } else {
+      setShareState('just-me');
+      setSelectedCoEaters(new Set());
+    }
+  };
+
+  // ─── Render ────────────────────────────────────────────────────
+
+  return (
+    <ChatContainer>
+      {/* Header */}
+      <HeaderRow>
+        <MessageSquare size={24} color="#a855f7" />
+        <span style={{ color: '#a855f7', fontWeight: 600, fontSize: '1.125rem' }}>
+          Plenish Agent
+        </span>
+      </HeaderRow>
+
+      {/* Message List */}
+      <MessageList>
+        {/* Initial greeting */}
+        <MessageBubble $role="assistant">
+          ¡Hola! Soy tu asistente de Plenish. ¿Qué comiste hoy o necesitas ayuda
+          planificando tu semana?
+        </MessageBubble>
+
+        {/* Chat messages */}
+        {messages.map((m: UIMessage, i: number) => {
+          const content = m.parts
+            ?.filter((p) => p.type === 'text')
+            .map((p) => p.text)
+            .join('') ?? '';
+          return (
+            <MessageBubble key={m.id ?? i} $role={m.role as 'user' | 'assistant'}>
+              {content}
+            </MessageBubble>
+          );
+        })}
+
+        {/* Loading indicator */}
+        {isLoading && (
+          <MessageBubble $role="assistant">
+            <em>Pensando...</em>
+          </MessageBubble>
+        )}
+
+        {/* Error display */}
+        {error && (
+          <div
+            style={{
+              color: '#ef4444',
+              fontSize: '0.875rem',
+              padding: '1rem',
+              border: '1px solid #ef4444',
+              borderRadius: '8px',
+              marginTop: '0.5rem',
+            }}
+          >
+            <strong>Error:</strong> {error.message || 'An error occurred.'}
+          </div>
+        )}
+
+        {/* Auto-scroll target */}
+        <div ref={endOfMessagesRef} />
+      </MessageList>
+
+      {/* Date + Meal Type Chips + Share Selector */}
+      <ChipRow>
+        {/* Date chip — clicking opens native calendar */}
+        <div style={{ position: 'relative' }}>
+          <DateChip
+            type="button"
+            $active={selectedDate !== null && selectedDate !== todayISO()}
+            onClick={handleDateChipClick}
+            disabled={isLoading}
+            title="Select meal date"
+          >
+            📅 {getDateLabel(selectedDate)}
+          </DateChip>
+          <HiddenDateInput
+            ref={dateInputRef}
+            type="date"
+            value={selectedDate ?? todayISO()}
+            max={todayISO()}
+            onChange={handleDateChange}
+            tabIndex={-1}
+          />
+        </div>
+
+        <ChipSeparator>|</ChipSeparator>
+
+        {MEAL_TYPES.map((type) => (
+          <MealTypeChip
+            key={type}
+            $active={selectedMealType === type}
+            onClick={() => handleChipClick(type)}
+            disabled={isLoading}
+            type="button"
+            title={selectedMealType === type ? 'Click to deselect' : `Log as ${type}`}
+          >
+            {type.charAt(0).toUpperCase() + type.slice(1)}
+            {selectedMealType === type && <X size={12} style={{ marginLeft: '4px' }} />}
+          </MealTypeChip>
+        ))}
+
+        {householdMembers.length > 0 && (
+          <>
+            <ChipSeparator>|</ChipSeparator>
+            <ShareButton
+              type="button"
+              $state={shareState}
+              onClick={handleShareClick}
+              disabled={isLoading}
+              title="Who sees this meal?"
+            >
+              {shareState === 'just-me' ? '👤 Just me' : shareState === 'all' ? '👥 All' : '👥 Partial'}
+            </ShareButton>
+          </>
+        )}
+      </ChipRow>
+
+      {/* Input Form */}
+      <InputForm onSubmit={handleFormSubmit}>
+        <ChatInput
+          value={localInput}
+          onChange={(e) => setLocalInput(e.target.value)}
+          placeholder={
+            selectedMealType
+              ? `Describe your ${selectedMealType}...`
+              : 'Ask me anything or select a meal type to log...'
+          }
+          disabled={isLoading}
+        />
+
+        {/* Send Button */}
+        <SendButton
+          type="submit"
+          disabled={isLoading || !localInput.trim()}
+          title="Submit"
+        >
+          {isLoading ? (
+            <Loader2 className="spinner" size={18} />
+          ) : (
+            <Send size={18} />
+          )}
+        </SendButton>
+      </InputForm>
+    </ChatContainer>
+  );
+}

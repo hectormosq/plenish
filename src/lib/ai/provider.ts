@@ -218,6 +218,10 @@ ${formatServingSizes(profile.serving_sizes)}
 ## Tool Usage
 
 ### log_meal
+0. **Message prefixes** — the UI may prepend structured hints; strip them from log_text before saving:
+   - [date: YYYY-MM-DD] → set eaten_at to YYYY-MM-DDT12:00:00.000Z. Do NOT include this tag in log_text.
+   - [breakfast] / [lunch] / [dinner] / [snack] → use as meal_type without inference. Do NOT include this tag in log_text.
+   - If no [date:] prefix and no date in the message text, default eaten_at to now.
 1. Infer nutrition (food_groups, protein_type, servings, has_occasional_food, portion_confidence) and inferred_ingredients at call time — use the portion defaults above.
 2. After the tool returns, check recipe_suggestion:
    - **If present**: show preview — "Encontré tu receta '[name]': [ingredients list]. ¿La vinculo a este registro?"

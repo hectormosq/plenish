@@ -1,5 +1,12 @@
 'use client';
 
+/**
+ * @deprecated Logic moved to MealLogger (Phase 1: 004-ui-chat-form-merge)
+ * This component's chat functionality has been consolidated into MealLogger.tsx
+ * which provides a unified interface for both chat and meal logging.
+ * Keeping this file for reference; can be deleted after Phase 1 is verified.
+ */
+
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import type { UIMessage } from 'ai';

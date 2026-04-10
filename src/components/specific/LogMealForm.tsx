@@ -1,5 +1,12 @@
 'use client';
 
+/**
+ * @deprecated Use MealLogger instead (Phase 1: 004-ui-chat-form-merge)
+ * This component has been consolidated into MealLogger.tsx which combines
+ * chat + meal logging into a unified interface.
+ * Keeping this file for reference; can be deleted in Phase 2+.
+ */
+
 import React, { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import styled, { keyframes, css } from 'styled-components';
