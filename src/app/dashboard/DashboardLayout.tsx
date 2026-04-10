@@ -2,7 +2,6 @@
 
 import type { ReactNode } from 'react';
 import styled, { keyframes } from 'styled-components';
-import { AIChatBox } from '@/components/specific/AIChatBox';
 import { Utensils, LogOut } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -126,7 +125,6 @@ export function DashboardLayout({ recentMealsSlot, recommendationSlot, household
       <PageContent>
         {/* Left Column — Primary AI Interaction & Forms */}
         <LeftColumn>
-          <AIChatBox />
           {mealLoggerSlot}
         </LeftColumn>
 

@@ -8,7 +8,7 @@ import type { UIMessage } from 'ai';
 import styled, { keyframes } from 'styled-components';
 import { logMeal, MealType } from '@/actions/meals';
 import type { HouseholdMemberSimple } from '@/actions/households';
-import { MessageSquare, Send, Users, Loader2 } from 'lucide-react';
+import { MessageSquare, Send, Users, Loader2, X } from 'lucide-react';
 
 // ─── Styled Components (from AIChatBox) ────────────────────────────────────
 
@@ -240,7 +240,8 @@ export function MealLogger({
   // ─── Form State (from LogMealForm) ──────────────────────────────
 
   const [localInput, setLocalInput] = useState('');
-  const [selectedMealType, setSelectedMealType] = useState<MealType>('lunch');
+  // null = no chip selected (chat mode); set = meal log mode
+  const [selectedMealType, setSelectedMealType] = useState<MealType | null>(null);
   const [shareState, setShareState] = useState<'just-me' | 'all' | 'partial'>(
     'just-me'
   );
@@ -254,32 +255,40 @@ export function MealLogger({
     e.preventDefault();
     if (!localInput.trim()) return;
 
-    startTransition(async () => {
-      try {
-        await logMeal(
-          localInput,
-          selectedMealType,
-          shareState !== 'just-me' && householdId
-            ? {
-                isShared: true,
-                householdId,
-                coEaterIds: Array.from(selectedCoEaters),
-              }
-            : undefined
-        );
-        setLocalInput('');
-        setSelectedMealType('lunch');
-        setShareState('just-me');
-        setSelectedCoEaters(new Set());
-        router.refresh();
-      } catch (err) {
-        console.error('Failed to log meal:', err);
-      }
-    });
+    if (selectedMealType) {
+      // Chip selected → log meal directly via server action
+      startTransition(async () => {
+        try {
+          await logMeal(
+            localInput,
+            selectedMealType,
+            shareState !== 'just-me' && householdId
+              ? {
+                  isShared: true,
+                  householdId,
+                  coEaterIds: Array.from(selectedCoEaters),
+                }
+              : undefined
+          );
+          setLocalInput('');
+          setSelectedMealType(null);
+          setShareState('just-me');
+          setSelectedCoEaters(new Set());
+          router.refresh();
+        } catch (err) {
+          console.error('Failed to log meal:', err);
+        }
+      });
+    } else {
+      // No chip selected → send to AI chat
+      sendMessage({ text: localInput });
+      setLocalInput('');
+    }
   };
 
   const handleChipClick = (type: MealType) => {
-    setSelectedMealType(type);
+    // Toggle: clicking the active chip deselects it (back to chat mode)
+    setSelectedMealType((prev) => (prev === type ? null : type));
   };
 
   const handleShareClick = () => {
@@ -363,8 +372,10 @@ export function MealLogger({
             onClick={() => handleChipClick(type)}
             disabled={isPending || isLoading}
             type="button"
+            title={selectedMealType === type ? 'Click to deselect (switch to chat)' : `Log as ${type}`}
           >
             {type.charAt(0).toUpperCase() + type.slice(1)}
+            {selectedMealType === type && <X size={12} style={{ marginLeft: '4px' }} />}
           </MealTypeChip>
         ))}
       </ChipRow>
@@ -374,12 +385,16 @@ export function MealLogger({
         <ChatInput
           value={localInput}
           onChange={(e) => setLocalInput(e.target.value)}
-          placeholder="Type a message or describe your meal..."
+          placeholder={
+            selectedMealType
+              ? `Describe your ${selectedMealType}...`
+              : 'Ask me anything or select a meal type to log...'
+          }
           disabled={isPending || isLoading}
         />
 
-        {/* Share Button (visible if household exists) */}
-        {householdMembers.length > 0 && (
+        {/* Share Button (visible if household exists and in meal log mode) */}
+        {householdMembers.length > 0 && selectedMealType && (
           <ShareButton
             type="button"
             $state={shareState}
@@ -388,7 +403,7 @@ export function MealLogger({
             title="Click to change sharing preference"
           >
             <Users size={13} />
-            {shareState === 'just-me' ? '👤' : '👥'}
+            {shareState === 'just-me' ? 'Just me' : 'Shared'}
           </ShareButton>
         )}
 
