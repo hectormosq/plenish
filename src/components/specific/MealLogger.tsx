@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useState, useTransition, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useRef, useEffect } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import type { UIMessage } from 'ai';
 import styled, { keyframes } from 'styled-components';
-import { logMeal, MealType } from '@/actions/meals';
+import type { MealType } from '@/actions/meals';
 import type { HouseholdMemberSimple } from '@/actions/households';
 import { MessageSquare, Send, Loader2, X } from 'lucide-react';
 
@@ -227,11 +226,6 @@ export function MealLogger({
   householdMembers = [],
   householdId = null,
 }: MealLoggerProps) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-
-  // ─── Chat State (from AIChatBox) ─────────────────────────────────
-
   const { messages, status, error, sendMessage } = useChat({
     transport: new DefaultChatTransport({
       body: { tzOffset: new Date().getTimezoneOffset() },
@@ -244,14 +238,9 @@ export function MealLogger({
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, error]);
 
-  // ─── Form State (from LogMealForm) ──────────────────────────────
-
   const [localInput, setLocalInput] = useState('');
-  // null = no chip selected (chat mode); set = meal log mode
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(null);
-  const [shareState, setShareState] = useState<'just-me' | 'all' | 'partial'>(
-    'all'
-  );
+  const [shareState, setShareState] = useState<'just-me' | 'all' | 'partial'>('all');
   const [selectedCoEaters, setSelectedCoEaters] = useState<Set<string>>(
     new Set(householdMembers.map((m) => m.user_id))
   );
@@ -262,39 +251,20 @@ export function MealLogger({
     e.preventDefault();
     if (!localInput.trim()) return;
 
-    if (selectedMealType) {
-      // Chip selected → log meal directly via server action
-      startTransition(async () => {
-        try {
-          await logMeal(
-            localInput,
-            selectedMealType,
-            shareState !== 'just-me' && householdId
-              ? {
-                  isShared: true,
-                  householdId,
-                  coEaterIds: Array.from(selectedCoEaters),
-                }
-              : undefined
-          );
-          setLocalInput('');
-          setSelectedMealType(null);
-          setShareState('just-me');
-          setSelectedCoEaters(new Set());
-          router.refresh();
-        } catch (err) {
-          console.error('Failed to log meal:', err);
-        }
-      });
-    } else {
-      // No chip selected → send to AI chat
-      sendMessage({ text: localInput });
-      setLocalInput('');
-    }
+    // Always route through AI — it handles date parsing ("ayer", "yesterday",
+    // "hace 2 días") via the eaten_at field in the log_meal tool.
+    // If a chip is selected, prefix the meal type so the AI uses it as-is
+    // rather than inferring from time of day.
+    const text = selectedMealType
+      ? `[${selectedMealType}] ${localInput}`
+      : localInput;
+
+    sendMessage({ text });
+    setLocalInput('');
+    setSelectedMealType(null);
   };
 
   const handleChipClick = (type: MealType) => {
-    // Toggle: clicking the active chip deselects it (back to chat mode)
     setSelectedMealType((prev) => (prev === type ? null : type));
   };
 
@@ -377,7 +347,7 @@ export function MealLogger({
             key={type}
             $active={selectedMealType === type}
             onClick={() => handleChipClick(type)}
-            disabled={isPending || isLoading}
+            disabled={isLoading}
             type="button"
             title={selectedMealType === type ? 'Click to deselect (switch to chat)' : `Log as ${type}`}
           >
@@ -393,7 +363,7 @@ export function MealLogger({
               type="button"
               $state={shareState}
               onClick={handleShareClick}
-              disabled={isPending || isLoading}
+              disabled={isLoading}
               title="Who sees this meal?"
             >
               {shareState === 'just-me' ? '👤 Just me' : shareState === 'all' ? '👥 All' : '👥 Partial'}
@@ -412,16 +382,16 @@ export function MealLogger({
               ? `Describe your ${selectedMealType}...`
               : 'Ask me anything or select a meal type to log...'
           }
-          disabled={isPending || isLoading}
+          disabled={isLoading}
         />
 
         {/* Send Button */}
         <SendButton
           type="submit"
-          disabled={isPending || isLoading || !localInput.trim()}
+          disabled={isLoading || !localInput.trim()}
           title="Submit"
         >
-          {isPending || isLoading ? (
+          {isLoading ? (
             <Loader2 className="spinner" size={18} />
           ) : (
             <Send size={18} />
