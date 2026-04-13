@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import { deleteMeal, dismissSharedMeal, type MealType } from '@/actions/meals';
 import { getCalendarMeals } from '@/actions/calendar';
-import { Trash2, EyeOff, Clock, Info, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Trash2, EyeOff, Clock, Info, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -196,15 +196,18 @@ const LabelText = styled.span<{ $color: string }>`
   color: ${({ $color }) => $color};
 `;
 
-const Cell = styled.div<{ $today: boolean; $filled: boolean; $bg: string }>`
+const Cell = styled.div<{ $today: boolean; $filled: boolean; $bg: string; $shared?: boolean }>`
   position: relative;
   min-height: 76px;
   padding: 0.4rem;
   border-right: 1px solid #1a1a1a;
   border-bottom: 1px solid #1a1a1a;
-  background: ${({ $filled, $bg, $today }) =>
+  border-left: ${({ $shared }) => ($shared ? '2px solid rgba(96,165,250,0.35)' : '1px solid #1a1a1a')};
+  background-color: ${({ $filled, $bg, $today }) =>
     $filled ? $bg : $today ? 'rgba(59,130,246,0.025)' : 'transparent'};
-  transition: background 0.12s;
+  background-image: ${({ $shared }) =>
+    $shared ? 'linear-gradient(rgba(96,165,250,0.13), rgba(96,165,250,0.13))' : 'none'};
+  transition: background-color 0.12s;
 `;
 
 const Ghost = styled.span`
@@ -268,6 +271,42 @@ const InfoButton = styled.button`
     color: #6b7280;
     background: rgba(255, 255, 255, 0.06);
   }
+`;
+
+const DismissButton = styled.button`
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(96, 165, 250, 0.1);
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  color: #60a5fa;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.12s;
+
+  &:hover:not(:disabled) {
+    background: rgba(96, 165, 250, 0.22);
+    color: #93c5fd;
+    border-color: rgba(96, 165, 250, 0.45);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+`;
+
+const CoEaterLabel = styled.span`
+  font-size: 0.6rem;
+  color: #60a5fa;
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  white-space: nowrap;
 `;
 
 // ─── Tooltip (fixed position, rendered at root of component) ─────────────────
@@ -487,27 +526,34 @@ export function MealWeekGrid({ meals: initialMeals, daysBack: initialDaysBack = 
               const coEaters = (primary.meal_participants ?? []).filter((p) => !p.dismissed);
 
               return (
-                <Cell key={dayKey} $today={isToday} $filled $bg={MEAL_BG[mealType]}>
+                <Cell key={dayKey} $today={isToday} $filled $bg={MEAL_BG[mealType]} $shared={primary.is_shared}>
                   <CellBody>
                     <CellText>{primary.log_text}</CellText>
                     <CellFooter>
                       {primary.is_shared && (
-                        <span
-                          style={{ fontSize: '0.65rem' }}
-                          title={coEaters.length > 0 ? `Shared with ${coEaters.length} co-eater(s)` : 'Shared'}
-                        >
-                          👥
-                        </span>
+                        <CoEaterLabel>
+                          👥{coEaters.length > 0 ? ` ${coEaters.length}` : ''}
+                        </CoEaterLabel>
                       )}
                       {slot.length > 1 && <ExtraCount>+{slot.length - 1}</ExtraCount>}
                     </CellFooter>
                   </CellBody>
-                  <InfoButton
-                    onClick={(e) => handleInfoClick(e, primary)}
-                    title="Meal details"
-                  >
-                    <Info size={10} />
-                  </InfoButton>
+                  {!primary.isOwn ? (
+                    <DismissButton
+                      onClick={(e) => { e.stopPropagation(); handleDismiss(primary.id); }}
+                      disabled={isPending}
+                      title="Dismiss shared meal"
+                    >
+                      <X size={9} />
+                    </DismissButton>
+                  ) : (
+                    <InfoButton
+                      onClick={(e) => handleInfoClick(e, primary)}
+                      title="Meal details"
+                    >
+                      <Info size={10} />
+                    </InfoButton>
+                  )}
                 </Cell>
               );
             })}
