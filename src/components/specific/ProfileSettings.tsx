@@ -60,6 +60,12 @@ const SavedText = styled.p`
   color: #4b5563;
 `;
 
+const ErrorText = styled.p`
+  margin: 0;
+  font-size: 0.775rem;
+  color: #f87171;
+`;
+
 interface Props {
   initialShareDefault: 'just-me' | 'all';
 }
@@ -68,14 +74,21 @@ export function ProfileSettings({ initialShareDefault }: Props) {
   const [shareDefault, setShareDefault] = useState<'just-me' | 'all'>(initialShareDefault);
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleChange = (value: 'just-me' | 'all') => {
     if (value === shareDefault || isPending) return;
     setShareDefault(value);
     setSaved(false);
+    setSaveError(null);
     startTransition(async () => {
-      await updateShareDefault(value);
-      setSaved(true);
+      try {
+        await updateShareDefault(value);
+        setSaved(true);
+      } catch (e) {
+        setSaveError((e as Error).message);
+        setShareDefault(shareDefault); // revert optimistic update
+      }
     });
   };
 
@@ -108,6 +121,7 @@ export function ProfileSettings({ initialShareDefault }: Props) {
         </ToggleGroup>
       </SettingRow>
       {saved && <SavedText>Saved.</SavedText>}
+      {saveError && <ErrorText>{saveError}</ErrorText>}
     </Card>
   );
 }
