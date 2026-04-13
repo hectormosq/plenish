@@ -281,6 +281,7 @@ const EditIconButton = styled.button`
 interface MealLoggerProps {
   householdMembers?: HouseholdMemberSimple[];
   householdId?: string | null;
+  defaultShareState?: 'just-me' | 'all';
 }
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
@@ -288,6 +289,7 @@ const MEAL_TYPES = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
 export function MealLogger({
   householdMembers = [],
   householdId = null,
+  defaultShareState = 'all',
 }: MealLoggerProps) {
   const { messages, status, error, sendMessage } = useChat({
     transport: new DefaultChatTransport({
@@ -306,9 +308,9 @@ export function MealLogger({
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(null);
   // null = let AI infer from text; YYYY-MM-DD string = explicit date
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [shareState, setShareState] = useState<'just-me' | 'all' | 'partial'>('all');
+  const [shareState, setShareState] = useState<'just-me' | 'all' | 'partial'>(defaultShareState);
   const [selectedCoEaters, setSelectedCoEaters] = useState<Set<string>>(
-    new Set(householdMembers.map((m) => m.user_id))
+    defaultShareState === 'just-me' ? new Set() : new Set(householdMembers.map((m) => m.user_id))
   );
   const [pickerOpen, setPickerOpen] = useState(false);
 

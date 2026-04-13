@@ -1,6 +1,5 @@
 import { DashboardLayout } from './DashboardLayout';
 import { MealCalendar } from '@/components/specific/MealCalendar';
-import { HouseholdPanel } from '@/components/specific/HouseholdPanel';
 import { LogMealFormWrapper } from '@/components/specific/LogMealFormWrapper';
 import { RecommendationFetcher } from '@/components/specific/RecommendationFetcher';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
@@ -17,11 +16,6 @@ export default async function DashboardPage() {
       calendarSlot={
         <Suspense fallback={<SkeletonCard />}>
           <MealCalendar />
-        </Suspense>
-      }
-      householdSlot={
-        <Suspense fallback={<SkeletonCard />}>
-          <HouseholdPanel />
         </Suspense>
       }
       recommendationSlot={
