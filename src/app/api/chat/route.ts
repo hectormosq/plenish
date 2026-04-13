@@ -2,6 +2,7 @@ import { streamText, convertToModelMessages, stepCountIs } from 'ai';
 import { getAIModel, getSystemPrompt } from '@/lib/ai/provider';
 import { createClient } from '@/lib/supabase/server';
 import { createMealTools } from '@/lib/ai/tools/meal-tools';
+import { planMealsTool } from '@/lib/ai/tools/plan-tools';
 
 export const runtime = 'nodejs';
 
@@ -36,6 +37,7 @@ export async function POST(req: Request) {
       delete_meal:        deleteMealTool,
       update_meal:        updateMealTool,
       get_daily_summary:  getDailySummaryTool,
+      plan_meals:         planMealsTool,
     },
     stopWhen: stepCountIs(7),
   });

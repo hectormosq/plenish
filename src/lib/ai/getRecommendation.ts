@@ -15,32 +15,68 @@ export const RecommendationSchema = z.object({
 
 export type Recommendation = z.infer<typeof RecommendationSchema>;
 
-function buildPrompt(recentMeals: MealLog[]): string {
-  if (recentMeals.length === 0) {
-    return 'The user has no meal history yet. Recommend a classic, balanced Spanish or Latin dish for lunch.';
-  }
-
-  const summary = recentMeals
-    .map(m => `- ${m.meal_type}: ${m.log_text}`)
-    .join('\n');
-
-  return `Based on the user's recent meals, recommend a single meal for their next eating occasion.
-
-Recent meal history:
-${summary}
-
-Consider variety, nutritional balance, and cultural preference for Spanish/Latin cuisine.
-Avoid recommending something they just had. Keep it practical and appetizing.`;
+function buildRecentSummary(recentMeals: MealLog[]): string {
+  if (recentMeals.length === 0) return 'No recent meal history.';
+  return recentMeals.map(m => `- ${m.meal_type}: ${m.log_text}`).join('\n');
 }
 
-export async function generateAIRecommendation(recentMeals: MealLog[]): Promise<Recommendation> {
+export async function generateSinglePlan(
+  mealType: string,
+  date: string,
+  recentMeals: MealLog[],
+  rejectedSummary: string,
+): Promise<Recommendation> {
   const model = getAIModel();
+  const rejectedPart = rejectedSummary
+    ? `\n\nAvoid these previously rejected meals:\n${rejectedSummary}`
+    : '';
 
   const { object } = await generateObject({
     model,
     schema: RecommendationSchema,
-    prompt: buildPrompt(recentMeals),
+    prompt: `Plan a ${mealType} for ${date}.
+
+Recent meal history:
+${buildRecentSummary(recentMeals)}
+${rejectedPart}
+
+Consider variety, nutritional balance, and cultural preference for Spanish/Latin cuisine.
+Avoid repeating meals from recent history. Keep it practical and appetizing.`,
   });
 
   return object;
+}
+
+const WeekPlanSchema = z.object({
+  meals: z.array(RecommendationSchema),
+});
+
+export async function generateWeekPlan(
+  slots: { mealType: string; date: string }[],
+  recentMeals: MealLog[],
+  rejectedSummary: string,
+): Promise<Recommendation[]> {
+  const model = getAIModel();
+  const rejectedPart = rejectedSummary
+    ? `\n\nAvoid these previously rejected meals:\n${rejectedSummary}`
+    : '';
+
+  const slotsList = slots.map(s => `- ${s.mealType} on ${s.date}`).join('\n');
+
+  const { object } = await generateObject({
+    model,
+    schema: WeekPlanSchema,
+    prompt: `Plan the following ${slots.length} meals for this week:
+${slotsList}
+
+Recent meal history:
+${buildRecentSummary(recentMeals)}
+${rejectedPart}
+
+For each slot, suggest a different meal. Consider variety, nutritional balance, and cultural preference for Spanish/Latin cuisine.
+Avoid repeating meals from recent history or between slots. Keep it practical and appetizing.
+Return exactly ${slots.length} meals in the meals array, one per slot in the same order listed.`,
+  });
+
+  return object.meals;
 }

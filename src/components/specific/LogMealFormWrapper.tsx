@@ -2,8 +2,15 @@ import React from 'react';
 import { getHousehold } from '@/actions/households';
 import { getShareDefault } from '@/actions/profile';
 import { MealLogger } from './MealLogger';
+import type { MealType } from '@/actions/meals';
 
-export async function LogMealFormWrapper() {
+interface Props {
+  initialMealType?: MealType;
+  initialText?: string;
+  initialDate?: string;
+}
+
+export async function LogMealFormWrapper({ initialMealType, initialText, initialDate }: Props) {
   const [household, shareDefault] = await Promise.all([
     getHousehold(),
     getShareDefault(),
@@ -20,6 +27,9 @@ export async function LogMealFormWrapper() {
       householdMembers={members}
       householdId={household?.id ?? null}
       defaultShareState={shareDefault}
+      initialMealType={initialMealType}
+      initialText={initialText}
+      initialDate={initialDate}
     />
   );
 }

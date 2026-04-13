@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import type { UIMessage } from 'ai';
@@ -282,6 +283,9 @@ interface MealLoggerProps {
   householdMembers?: HouseholdMemberSimple[];
   householdId?: string | null;
   defaultShareState?: 'just-me' | 'all';
+  initialMealType?: MealType;
+  initialText?: string;
+  initialDate?: string;
 }
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
@@ -290,7 +294,11 @@ export function MealLogger({
   householdMembers = [],
   householdId = null,
   defaultShareState = 'all',
+  initialMealType,
+  initialText,
+  initialDate,
 }: MealLoggerProps) {
+  const router = useRouter();
   const { messages, status, error, sendMessage } = useChat({
     transport: new DefaultChatTransport({
       body: { tzOffset: new Date().getTimezoneOffset() },
@@ -299,15 +307,25 @@ export function MealLogger({
   const isLoading = status === 'streaming' || status === 'submitted';
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, error]);
 
-  const [localInput, setLocalInput] = useState('');
-  const [selectedMealType, setSelectedMealType] = useState<MealType | null>(null);
+  // Clear prefill URL params after mount so they don't persist on refresh
+  useEffect(() => {
+    if (initialText) {
+      router.replace('/dashboard');
+      inputRef.current?.focus();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const [localInput, setLocalInput] = useState(initialText ?? '');
+  const [selectedMealType, setSelectedMealType] = useState<MealType | null>(initialMealType ?? null);
   // null = let AI infer from text; YYYY-MM-DD string = explicit date
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(initialDate ?? null);
   const [shareState, setShareState] = useState<'just-me' | 'all' | 'partial'>(defaultShareState);
   const [selectedCoEaters, setSelectedCoEaters] = useState<Set<string>>(
     defaultShareState === 'just-me' ? new Set() : new Set(householdMembers.map((m) => m.user_id))
@@ -561,6 +579,7 @@ export function MealLogger({
       {/* Input Form */}
       <InputForm onSubmit={handleFormSubmit}>
         <ChatInput
+          ref={inputRef}
           value={localInput}
           onChange={(e) => setLocalInput(e.target.value)}
           placeholder={

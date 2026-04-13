@@ -5,7 +5,29 @@ import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import { deleteMeal, dismissSharedMeal, type MealType } from '@/actions/meals';
 import { getCalendarMeals } from '@/actions/calendar';
-import { Trash2, EyeOff, Clock, Info, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import {
+  planSingleSlot,
+  planWeekSlots,
+  regenerateSlot,
+  dismissPlannedMeal,
+  acceptPlannedMeal,
+  getPlannedMeals,
+  type PlannedMeal,
+} from '@/actions/plans';
+import {
+  Trash2,
+  EyeOff,
+  Clock,
+  Info,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Check,
+  RotateCcw,
+  X as XIcon,
+  CalendarDays,
+  Loader2,
+} from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,6 +65,13 @@ const MEAL_BG: Record<MealType, string> = {
   snack:     'rgba(167, 139, 250, 0.10)',
   lunch:     'rgba(52, 211, 153, 0.10)',
   dinner:    'rgba(129, 140, 248, 0.10)',
+};
+
+const PLANNED_BG: Record<MealType, string> = {
+  breakfast: 'rgba(251, 191, 36, 0.05)',
+  snack:     'rgba(167, 139, 250, 0.05)',
+  lunch:     'rgba(52, 211, 153, 0.05)',
+  dinner:    'rgba(129, 140, 248, 0.05)',
 };
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -85,6 +114,7 @@ function formatTime(iso: string): string {
 function getWeekLabel(weekDays: Date[], offset: number): string {
   if (offset === 0) return 'This Week';
   if (offset === -1) return 'Last Week';
+  if (offset === 1) return 'Next Week';
   const start = weekDays[0].toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   const end = weekDays[6].toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   return `${start} – ${end}`;
@@ -133,6 +163,33 @@ const NavButton = styled.button`
     color: #d1d5db;
     border-color: #3a3a3a;
     background: rgba(255,255,255,0.04);
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+`;
+
+const PlanWeekButton = styled.button<{ $loading?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: transparent;
+  border: 1px solid rgba(72, 199, 142, 0.3);
+  color: #48c78e;
+  border-radius: 6px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  opacity: ${({ $loading }) => ($loading ? 0.6 : 1)};
+
+  &:hover:not(:disabled) {
+    background: rgba(72, 199, 142, 0.08);
+    border-color: rgba(72, 199, 142, 0.6);
   }
 
   &:disabled {
@@ -196,7 +253,14 @@ const LabelText = styled.span<{ $color: string }>`
   color: ${({ $color }) => $color};
 `;
 
-const Cell = styled.div<{ $today: boolean; $filled: boolean; $bg: string; $shared?: boolean }>`
+const Cell = styled.div<{
+  $today: boolean;
+  $filled: boolean;
+  $bg: string;
+  $shared?: boolean;
+  $planned?: boolean;
+  $planColor?: string;
+}>`
   position: relative;
   min-height: 76px;
   padding: 0.4rem;
@@ -207,7 +271,19 @@ const Cell = styled.div<{ $today: boolean; $filled: boolean; $bg: string; $share
     $filled ? $bg : $today ? 'rgba(59,130,246,0.025)' : 'transparent'};
   background-image: ${({ $shared }) =>
     $shared ? 'linear-gradient(rgba(96,165,250,0.13), rgba(96,165,250,0.13))' : 'none'};
-  transition: background-color 0.12s;
+  transition: background 0.12s;
+  ${({ $planned, $planColor }) =>
+    $planned && $planColor
+      ? `box-shadow: inset 0 0 0 1px ${$planColor}55;`
+      : ''}
+`;
+
+const EmptyFutureCell = styled(Cell)`
+  cursor: pointer;
+
+  &:hover .plus-trigger {
+    opacity: 1;
+  }
 `;
 
 const Ghost = styled.span`
@@ -219,6 +295,27 @@ const Ghost = styled.span`
   color: #1f1f1f;
   font-size: 0.875rem;
   pointer-events: none;
+`;
+
+const PlusTrigger = styled.div`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  color: #374151;
+  pointer-events: none;
+`;
+
+const PlanningSpinner = styled.div`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4b5563;
 `;
 
 const CellBody = styled.div`
@@ -238,6 +335,64 @@ const CellText = styled.p`
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+`;
+
+const PlannedName = styled.p`
+  margin: 0;
+  font-size: 0.68rem;
+  color: #6b7280;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-style: italic;
+`;
+
+const PlannedActions = styled.div`
+  display: flex;
+  gap: 0.2rem;
+  margin-top: auto;
+  padding-top: 0.25rem;
+`;
+
+const PlanActionBtn = styled.button<{ $variant: 'accept' | 'regen' | 'dismiss' }>`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0;
+  border-radius: 4px;
+  border: 1px solid;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s;
+
+  ${({ $variant }) => {
+    if ($variant === 'accept') return `
+      background: rgba(72, 199, 142, 0.08);
+      border-color: rgba(72, 199, 142, 0.25);
+      color: #48c78e;
+      &:hover:not(:disabled) { background: rgba(72, 199, 142, 0.18); }
+    `;
+    if ($variant === 'regen') return `
+      background: rgba(251, 191, 36, 0.08);
+      border-color: rgba(251, 191, 36, 0.25);
+      color: #fbbf24;
+      &:hover:not(:disabled) { background: rgba(251, 191, 36, 0.18); }
+    `;
+    return `
+      background: rgba(107, 114, 128, 0.08);
+      border-color: rgba(107, 114, 128, 0.2);
+      color: #4b5563;
+      &:hover:not(:disabled) { background: rgba(107, 114, 128, 0.18); }
+    `;
+  }}
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 `;
 
 const CellFooter = styled.div`
@@ -384,7 +539,15 @@ interface TooltipState {
   y: number;
 }
 
-export function MealWeekGrid({ meals: initialMeals, daysBack: initialDaysBack = 35 }: { meals: CalendarMeal[]; daysBack?: number }) {
+export function MealWeekGrid({
+  meals: initialMeals,
+  daysBack: initialDaysBack = 35,
+  plannedMeals: initialPlannedMeals = [],
+}: {
+  meals: CalendarMeal[];
+  daysBack?: number;
+  plannedMeals?: PlannedMeal[];
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -392,6 +555,9 @@ export function MealWeekGrid({ meals: initialMeals, daysBack: initialDaysBack = 
   const [weekOffset, setWeekOffset] = useState(0);
   const [allMeals, setAllMeals] = useState<CalendarMeal[]>(initialMeals);
   const [loadedDaysBack, setLoadedDaysBack] = useState(initialDaysBack);
+  const [allPlannedMeals, setAllPlannedMeals] = useState<PlannedMeal[]>(initialPlannedMeals);
+  const [planningSlots, setPlanningSlots] = useState<Set<string>>(new Set());
+  const [isPlanningWeek, setIsPlanningWeek] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   // Close tooltip on click outside
@@ -437,8 +603,26 @@ export function MealWeekGrid({ meals: initialMeals, daysBack: initialDaysBack = 
     setWeekOffset(newOffset);
   };
 
-  const handleNextWeek = () => {
-    if (weekOffset < 0) setWeekOffset((o) => o + 1);
+  const handleNextWeek = async () => {
+    const newOffset = weekOffset + 1;
+
+    // If navigating to a future week beyond our loaded planned meals range,
+    // fetch more planned meals
+    const newSunday = getWeekDays(newOffset)[6];
+    const newSundayKey = toDayKey(newSunday);
+    const maxLoadedPlanned = allPlannedMeals.reduce<string>(
+      (max, p) => (p.planned_date > max ? p.planned_date : max),
+      todayKey,
+    );
+
+    if (newSundayKey > maxLoadedPlanned && newOffset > 0) {
+      const newEnd = new Date(newSunday);
+      newEnd.setDate(newEnd.getDate() + 56); // 8 more weeks buffer
+      const morePlanned = await getPlannedMeals(todayKey, newEnd.toISOString().split('T')[0]);
+      setAllPlannedMeals(morePlanned);
+    }
+
+    setWeekOffset(newOffset);
   };
 
   const handleInfoClick = (e: React.MouseEvent, meal: CalendarMeal) => {
@@ -467,6 +651,80 @@ export function MealWeekGrid({ meals: initialMeals, daysBack: initialDaysBack = 
     });
   };
 
+  // ─── Planned meal handlers ───────────────────────────────────────────────
+
+  const handlePlanSlot = async (mealType: MealType, date: string) => {
+    const slotKey = `${date}-${mealType}`;
+    setPlanningSlots((prev) => new Set(prev).add(slotKey));
+    try {
+      const planned = await planSingleSlot(mealType, date);
+      setAllPlannedMeals((prev) => [...prev, planned]);
+    } finally {
+      setPlanningSlots((prev) => {
+        const next = new Set(prev);
+        next.delete(slotKey);
+        return next;
+      });
+    }
+  };
+
+  const handleRegenerate = async (id: string, mealType: MealType, date: string) => {
+    const slotKey = `${date}-${mealType}`;
+    setPlanningSlots((prev) => new Set(prev).add(slotKey));
+    try {
+      // Optimistically remove old
+      setAllPlannedMeals((prev) => prev.filter((p) => p.id !== id));
+      const newPlan = await regenerateSlot(id, mealType, date);
+      setAllPlannedMeals((prev) => [...prev, newPlan]);
+    } finally {
+      setPlanningSlots((prev) => {
+        const next = new Set(prev);
+        next.delete(slotKey);
+        return next;
+      });
+    }
+  };
+
+  const handleDismissPlanned = (id: string) => {
+    // Optimistic removal
+    setAllPlannedMeals((prev) => prev.filter((p) => p.id !== id));
+    void dismissPlannedMeal(id);
+  };
+
+  const handleAcceptPlanned = (id: string, mealType: MealType, date: string, name: string) => {
+    // Fire-and-forget status update
+    void acceptPlannedMeal(id);
+    // Navigate to MealLogger with prefill
+    router.push(
+      `/dashboard?prefillType=${encodeURIComponent(mealType)}&prefillText=${encodeURIComponent(name)}&prefillDate=${encodeURIComponent(date)}`,
+    );
+  };
+
+  const handlePlanWeek = async () => {
+    setIsPlanningWeek(true);
+    try {
+      const emptySlots: { mealType: MealType; date: string }[] = [];
+      for (const mealType of MEAL_TYPES) {
+        for (const day of weekDays) {
+          const dayKey = toDayKey(day);
+          if (dayKey < todayKey) continue; // skip past
+          const hasLogged = bySlot.has(`${dayKey}-${mealType}`);
+          const hasPlanned = plannedBySlot.has(`${dayKey}-${mealType}`);
+          if (!hasLogged && !hasPlanned) {
+            emptySlots.push({ mealType, date: dayKey });
+          }
+        }
+      }
+
+      if (emptySlots.length === 0) return;
+
+      const newPlans = await planWeekSlots(emptySlots);
+      setAllPlannedMeals((prev) => [...prev, ...newPlans]);
+    } finally {
+      setIsPlanningWeek(false);
+    }
+  };
+
   // Group meals by "YYYY-MM-DD-mealtype"
   const bySlot = new Map<string, CalendarMeal[]>();
   for (const meal of allMeals) {
@@ -475,6 +733,19 @@ export function MealWeekGrid({ meals: initialMeals, daysBack: initialDaysBack = 
     bySlot.get(key)!.push(meal);
   }
 
+  // Group planned meals by slot (latest per slot = the active one)
+  const plannedBySlot = new Map<string, PlannedMeal>();
+  for (const plan of allPlannedMeals) {
+    const key = `${plan.planned_date}-${plan.meal_type}`;
+    const existing = plannedBySlot.get(key);
+    if (!existing || plan.created_at > existing.created_at) {
+      plannedBySlot.set(key, plan);
+    }
+  }
+
+  // Determine if "Plan Week" should be active (current or future week in view)
+  const planWeekActive = weekDays.some((d) => toDayKey(d) >= todayKey);
+
   return (
     <Wrapper>
       <Title>
@@ -482,8 +753,25 @@ export function MealWeekGrid({ meals: initialMeals, daysBack: initialDaysBack = 
           <ChevronLeft size={13} />
         </NavButton>
         <span style={{ color: '#3b82f6', fontSize: '0.875rem' }}>📅</span>
-        <WeekLabel>{isLoadingMore ? <LoadingText>Loading…</LoadingText> : getWeekLabel(weekDays, weekOffset)}</WeekLabel>
-        <NavButton onClick={handleNextWeek} disabled={weekOffset >= 0} title="Next week">
+        <WeekLabel>
+          {isLoadingMore ? <LoadingText>Loading…</LoadingText> : getWeekLabel(weekDays, weekOffset)}
+        </WeekLabel>
+        {planWeekActive && (
+          <PlanWeekButton
+            onClick={handlePlanWeek}
+            disabled={isPlanningWeek}
+            $loading={isPlanningWeek}
+            title="Plan all empty slots this week"
+          >
+            {isPlanningWeek ? (
+              <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} />
+            ) : (
+              <CalendarDays size={11} />
+            )}
+            Plan Week
+          </PlanWeekButton>
+        )}
+        <NavButton onClick={handleNextWeek} title="Next week">
           <ChevronRight size={13} />
         </NavButton>
       </Title>
@@ -512,48 +800,122 @@ export function MealWeekGrid({ meals: initialMeals, daysBack: initialDaysBack = 
             {weekDays.map((day) => {
               const dayKey = toDayKey(day);
               const isToday = dayKey === todayKey;
-              const slot = bySlot.get(`${dayKey}-${mealType}`) ?? [];
+              const slotKey = `${dayKey}-${mealType}`;
+              const slot = bySlot.get(slotKey) ?? [];
               const primary = slot[0] ?? null;
+              const planned = plannedBySlot.get(slotKey) ?? null;
+              const isPlanning = planningSlots.has(slotKey);
+              const isFuture = dayKey >= todayKey;
 
-              if (!primary) {
+              // ── Logged meal ──────────────────────────────────────────────
+              if (primary) {
+                const coEaters = (primary.meal_participants ?? []).filter((p) => !p.dismissed);
                 return (
-                  <Cell key={dayKey} $today={isToday} $filled={false} $bg="">
-                    <Ghost>—</Ghost>
+                  <Cell key={dayKey} $today={isToday} $filled $bg={MEAL_BG[mealType]} $shared={primary.is_shared}>
+                    <CellBody>
+                      <CellText>{primary.log_text}</CellText>
+                      <CellFooter>
+                        {primary.is_shared && (
+                          <CoEaterLabel>
+                            👥{coEaters.length > 0 ? ` ${coEaters.length}` : ''}
+                          </CoEaterLabel>
+                        )}
+                        {slot.length > 1 && <ExtraCount>+{slot.length - 1}</ExtraCount>}
+                      </CellFooter>
+                    </CellBody>
+                    {!primary.isOwn ? (
+                      <DismissButton
+                        onClick={(e) => { e.stopPropagation(); handleDismiss(primary.id); }}
+                        disabled={isPending}
+                        title="Dismiss shared meal"
+                      >
+                        <XIcon size={9} />
+                      </DismissButton>
+                    ) : (
+                      <InfoButton onClick={(e) => handleInfoClick(e, primary)} title="Meal details">
+                        <Info size={10} />
+                      </InfoButton>
+                    )}
                   </Cell>
                 );
               }
 
-              const coEaters = (primary.meal_participants ?? []).filter((p) => !p.dismissed);
+              // ── Planning spinner ─────────────────────────────────────────
+              if (isPlanning) {
+                return (
+                  <Cell key={dayKey} $today={isToday} $filled={false} $bg="">
+                    <PlanningSpinner>
+                      <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                    </PlanningSpinner>
+                  </Cell>
+                );
+              }
 
+              // ── Planned meal ─────────────────────────────────────────────
+              if (planned) {
+                return (
+                  <Cell
+                    key={dayKey}
+                    $today={isToday}
+                    $filled
+                    $bg={PLANNED_BG[mealType]}
+                    $planned
+                    $planColor={MEAL_COLOR[mealType]}
+                  >
+                    <CellBody>
+                      <PlannedName title={planned.name}>{planned.name}</PlannedName>
+                      <PlannedActions>
+                        <PlanActionBtn
+                          $variant="accept"
+                          title="Accept — pre-fill meal logger"
+                          onClick={() =>
+                            handleAcceptPlanned(planned.id, mealType, dayKey, planned.name)
+                          }
+                        >
+                          <Check size={9} />
+                        </PlanActionBtn>
+                        <PlanActionBtn
+                          $variant="regen"
+                          title="Regenerate suggestion"
+                          onClick={() => handleRegenerate(planned.id, mealType, dayKey)}
+                        >
+                          <RotateCcw size={9} />
+                        </PlanActionBtn>
+                        <PlanActionBtn
+                          $variant="dismiss"
+                          title="Dismiss"
+                          onClick={() => handleDismissPlanned(planned.id)}
+                        >
+                          <XIcon size={9} />
+                        </PlanActionBtn>
+                      </PlannedActions>
+                    </CellBody>
+                  </Cell>
+                );
+              }
+
+              // ── Empty future cell ────────────────────────────────────────
+              if (isFuture) {
+                return (
+                  <EmptyFutureCell
+                    key={dayKey}
+                    $today={isToday}
+                    $filled={false}
+                    $bg=""
+                    onClick={() => handlePlanSlot(mealType, dayKey)}
+                    title="Plan this meal"
+                  >
+                    <PlusTrigger className="plus-trigger">
+                      <Plus size={14} />
+                    </PlusTrigger>
+                  </EmptyFutureCell>
+                );
+              }
+
+              // ── Empty past cell ──────────────────────────────────────────
               return (
-                <Cell key={dayKey} $today={isToday} $filled $bg={MEAL_BG[mealType]} $shared={primary.is_shared}>
-                  <CellBody>
-                    <CellText>{primary.log_text}</CellText>
-                    <CellFooter>
-                      {primary.is_shared && (
-                        <CoEaterLabel>
-                          👥{coEaters.length > 0 ? ` ${coEaters.length}` : ''}
-                        </CoEaterLabel>
-                      )}
-                      {slot.length > 1 && <ExtraCount>+{slot.length - 1}</ExtraCount>}
-                    </CellFooter>
-                  </CellBody>
-                  {!primary.isOwn ? (
-                    <DismissButton
-                      onClick={(e) => { e.stopPropagation(); handleDismiss(primary.id); }}
-                      disabled={isPending}
-                      title="Dismiss shared meal"
-                    >
-                      <X size={9} />
-                    </DismissButton>
-                  ) : (
-                    <InfoButton
-                      onClick={(e) => handleInfoClick(e, primary)}
-                      title="Meal details"
-                    >
-                      <Info size={10} />
-                    </InfoButton>
-                  )}
+                <Cell key={dayKey} $today={isToday} $filled={false} $bg="">
+                  <Ghost>—</Ghost>
                 </Cell>
               );
             })}
@@ -563,18 +925,16 @@ export function MealWeekGrid({ meals: initialMeals, daysBack: initialDaysBack = 
 
       {/* Tooltip — click-triggered, fixed position */}
       {tooltip && (
-        <TooltipPortal
-          ref={tooltipRef}
-          $x={tooltip.x}
-          $y={tooltip.y}
-        >
+        <TooltipPortal ref={tooltipRef} $x={tooltip.x} $y={tooltip.y}>
           <TipText>{tooltip.meal.log_text}</TipText>
           <TipMeta>
             <Clock size={10} />
             {formatTime(tooltip.meal.eaten_at)}
             {tooltip.meal.is_shared && (
               <span>
-                · 👥 {(tooltip.meal.meal_participants ?? []).filter((p) => !p.dismissed).length} co-eater(s)
+                · 👥{' '}
+                {(tooltip.meal.meal_participants ?? []).filter((p) => !p.dismissed).length}{' '}
+                co-eater(s)
               </span>
             )}
           </TipMeta>
@@ -599,6 +959,10 @@ export function MealWeekGrid({ meals: initialMeals, daysBack: initialDaysBack = 
           </TipActions>
         </TooltipPortal>
       )}
+
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </Wrapper>
   );
 }
