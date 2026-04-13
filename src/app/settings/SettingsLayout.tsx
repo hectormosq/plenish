@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import styled, { keyframes } from 'styled-components';
-import { Utensils, LogOut, Settings } from 'lucide-react';
+import { Utensils, LogOut, ChevronLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 
@@ -12,7 +12,7 @@ const fadeIn = keyframes`
   to   { opacity: 1; transform: translateY(0); }
 `;
 
-const DashboardContainer = styled.div`
+const Container = styled.div`
   min-height: 100vh;
   background-color: #0a0c0a;
   color: #f0f0f0;
@@ -35,6 +35,12 @@ const NavBar = styled.nav`
   animation: ${fadeIn} 0.3s ease forwards;
 `;
 
+const NavLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+`;
+
 const NavLogo = styled.div`
   display: flex;
   align-items: center;
@@ -51,22 +57,16 @@ const LogoAccent = styled.span`
   -webkit-text-fill-color: transparent;
 `;
 
-const NavActions = styled.div`
+const BackLink = styled(Link)`
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-`;
-
-const SettingsLink = styled(Link)`
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+  gap: 0.3rem;
   color: #6b7280;
+  font-size: 0.875rem;
   text-decoration: none;
   border: 1px solid rgba(255,255,255,0.08);
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.75rem;
   border-radius: 8px;
-  font-size: 0.875rem;
   transition: all 0.2s ease;
 
   &:hover {
@@ -99,33 +99,25 @@ const SignOutButton = styled.button`
 
 const PageContent = styled.main`
   flex: 1;
-  padding: 1.25rem 1.5rem;
-  max-width: 1600px;
+  padding: 1.5rem;
+  max-width: 760px;
   width: 100%;
   margin: 0 auto;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1.5rem;
-  grid-template-columns: 1fr;
   animation: ${fadeIn} 0.4s ease 0.1s both;
-
-  @media (min-width: 1024px) {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
-  }
 `;
 
-const RightColumn = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+const PageHeading = styled.h1`
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f0f0f0;
+  letter-spacing: -0.02em;
 `;
 
-const LeftColumn = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-`;
-
-export function DashboardLayout({ calendarSlot, recommendationSlot, mealLoggerSlot }: { calendarSlot: ReactNode; recommendationSlot: ReactNode; mealLoggerSlot?: ReactNode }) {
+export function SettingsLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   async function handleSignOut() {
@@ -136,36 +128,28 @@ export function DashboardLayout({ calendarSlot, recommendationSlot, mealLoggerSl
   }
 
   return (
-    <DashboardContainer>
+    <Container>
       <NavBar>
-        <NavLogo>
-          <Utensils size={20} color="#48c78e" />
-          <LogoAccent>Plenish</LogoAccent>
-        </NavLogo>
-        <NavActions>
-          <SettingsLink href="/settings">
-            <Settings size={14} />
-            Settings
-          </SettingsLink>
-          <SignOutButton id="sign-out-btn" onClick={handleSignOut}>
-            <LogOut size={14} />
-            Sign out
-          </SignOutButton>
-        </NavActions>
+        <NavLeft>
+          <NavLogo>
+            <Utensils size={20} color="#48c78e" />
+            <LogoAccent>Plenish</LogoAccent>
+          </NavLogo>
+          <BackLink href="/dashboard">
+            <ChevronLeft size={14} />
+            Dashboard
+          </BackLink>
+        </NavLeft>
+        <SignOutButton onClick={handleSignOut}>
+          <LogOut size={14} />
+          Sign out
+        </SignOutButton>
       </NavBar>
 
       <PageContent>
-        {/* Left Column — Primary AI Interaction & Forms */}
-        <LeftColumn>
-          {mealLoggerSlot}
-        </LeftColumn>
-
-        {/* Right Column — Calendar + Context */}
-        <RightColumn>
-          {calendarSlot}
-          {recommendationSlot}
-        </RightColumn>
+        <PageHeading>Settings</PageHeading>
+        {children}
       </PageContent>
-    </DashboardContainer>
+    </Container>
   );
 }

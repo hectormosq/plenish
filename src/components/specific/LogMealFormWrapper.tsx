@@ -1,13 +1,13 @@
 import React from 'react';
 import { getHousehold } from '@/actions/households';
+import { getShareDefault } from '@/actions/profile';
 import { MealLogger } from './MealLogger';
 
-/**
- * Async server component that fetches the user's household members
- * and passes them to MealLogger so co-eater selection can be shown.
- */
 export async function LogMealFormWrapper() {
-  const household = await getHousehold();
+  const [household, shareDefault] = await Promise.all([
+    getHousehold(),
+    getShareDefault(),
+  ]);
 
   const members = household
     ? household.members
@@ -19,6 +19,7 @@ export async function LogMealFormWrapper() {
     <MealLogger
       householdMembers={members}
       householdId={household?.id ?? null}
+      defaultShareState={shareDefault}
     />
   );
 }
