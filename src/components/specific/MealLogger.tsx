@@ -7,7 +7,8 @@ import type { UIMessage } from 'ai';
 import styled, { keyframes } from 'styled-components';
 import type { MealType } from '@/actions/meals';
 import type { HouseholdMemberSimple } from '@/actions/households';
-import { MessageSquare, Send, Loader2, X } from 'lucide-react';
+import { MessageSquare, Send, Loader2, X, Pencil } from 'lucide-react';
+import { MemberPickerPopover } from '@/components/specific/MemberPickerPopover';
 
 // ─── Styled Components (from AIChatBox) ────────────────────────────────────
 
@@ -218,7 +219,13 @@ const spin = keyframes`
   to { transform: rotate(360deg); }
 `;
 
-// ─── NEW: 3-State Share Button (visual, logic in Phase 3) ────────────────
+// ─── 3-State Share Button (Phase 3) ──────────────────────────────────────
+
+const ShareButtonWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+`;
 
 const ShareButton = styled.button<{ $state: 'just-me' | 'all' | 'partial' }>`
   background: ${({ $state }) =>
@@ -238,6 +245,28 @@ const ShareButton = styled.button<{ $state: 'just-me' | 'all' | 'partial' }>`
 
   &:hover {
     border-color: #3b82f6;
+    color: #93c5fd;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+`;
+
+const EditIconButton = styled.button`
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 0.25rem;
+  margin-left: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: color 0.2s;
+
+  &:hover {
     color: #93c5fd;
   }
 
@@ -281,6 +310,7 @@ export function MealLogger({
   const [selectedCoEaters, setSelectedCoEaters] = useState<Set<string>>(
     new Set(householdMembers.map((m) => m.user_id))
   );
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // ─── Date helpers ────────────────────────────────────────────────
 
@@ -298,7 +328,20 @@ export function MealLogger({
     });
   };
 
-  // ─── Event Handlers ─────────────────────────────────────────────
+  // ─── Share label helpers ─────────────────────────────────────────────
+
+  const getShareLabel = (): string => {
+    if (shareState === 'just-me') return '👤 Just me';
+    if (shareState === 'all') return '👥 All';
+    // partial — show names if ≤ 2, otherwise "X/Y"
+    const names = householdMembers
+      .filter((m) => selectedCoEaters.has(m.user_id))
+      .map((m) => m.display_name.split(' ')[0]);
+    if (names.length <= 2) return `👥 ${names.join(', ')}`;
+    return `👥 ${names.length}/${householdMembers.length}`;
+  };
+
+  // ─── Event Handlers ─────────────────────────────────────────────────
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -312,6 +355,15 @@ export function MealLogger({
     }
     if (selectedMealType) {
       parts.push(`[${selectedMealType}]`);
+    }
+    // FR-007: pass co-eater context so the AI logs it shared correctly
+    if (shareState === 'all') {
+      parts.push('[shared with: all]');
+    } else if (shareState === 'partial') {
+      const names = householdMembers
+        .filter((m) => selectedCoEaters.has(m.user_id))
+        .map((m) => m.display_name);
+      if (names.length > 0) parts.push(`[shared with: ${names.join(', ')}]`);
     }
     const text = parts.length > 0 ? `${parts.join(' ')} ${localInput}` : localInput;
 
@@ -333,15 +385,37 @@ export function MealLogger({
     setSelectedDate(e.target.value || null);
   };
 
+  // FR-001: primary click toggles just-me ↔ all (fast path)
   const handleShareClick = () => {
-    // Phase 1: Simple cycling (just-me → all → just-me)
-    // Phase 3: Add member picker popover
     if (shareState === 'just-me') {
       setShareState('all');
       setSelectedCoEaters(new Set(householdMembers.map((m) => m.user_id)));
     } else {
+      // all or partial → just-me
       setShareState('just-me');
       setSelectedCoEaters(new Set());
+    }
+    setPickerOpen(false);
+  };
+
+  // FR-002: edit icon opens MemberPickerPopover
+  const handleEditIconClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPickerOpen((prev) => !prev);
+  };
+
+  // FR-005: confirm from picker determines state
+  const handlePickerConfirm = (picked: Set<string>) => {
+    setPickerOpen(false);
+    if (picked.size === 0) {
+      setShareState('just-me');
+      setSelectedCoEaters(new Set());
+    } else if (picked.size === householdMembers.length) {
+      setShareState('all');
+      setSelectedCoEaters(picked);
+    } else {
+      setShareState('partial');
+      setSelectedCoEaters(picked);
     }
   };
 
@@ -447,15 +521,37 @@ export function MealLogger({
         {householdMembers.length > 0 && (
           <>
             <ChipSeparator>|</ChipSeparator>
-            <ShareButton
-              type="button"
-              $state={shareState}
-              onClick={handleShareClick}
-              disabled={isLoading}
-              title="Who sees this meal?"
-            >
-              {shareState === 'just-me' ? '👤 Just me' : shareState === 'all' ? '👥 All' : '👥 Partial'}
-            </ShareButton>
+            <ShareButtonWrapper>
+              <ShareButton
+                type="button"
+                $state={shareState}
+                onClick={handleShareClick}
+                disabled={isLoading}
+                title={shareState === 'just-me' ? 'Click to share with all' : 'Click to set to just me'}
+              >
+                {getShareLabel()}
+              </ShareButton>
+              {/* Edit icon — visible when all or partial (FR-002) */}
+              {shareState !== 'just-me' && (
+                <EditIconButton
+                  type="button"
+                  onClick={handleEditIconClick}
+                  disabled={isLoading}
+                  title="Edit who's eating this"
+                >
+                  <Pencil size={13} />
+                </EditIconButton>
+              )}
+              {/* Member picker popover (FR-003 – FR-005) */}
+              {pickerOpen && (
+                <MemberPickerPopover
+                  members={householdMembers}
+                  selected={selectedCoEaters}
+                  onConfirm={handlePickerConfirm}
+                  onClose={() => setPickerOpen(false)}
+                />
+              )}
+            </ShareButtonWrapper>
           </>
         )}
       </ChipRow>
