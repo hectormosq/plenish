@@ -391,6 +391,10 @@ export function MealLogger({
     setLocalInput('');
     setSelectedMealType(null);
     setSelectedDate(null);
+    // Signal to MealLoggerBottomSheet (if open) to close after submit
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('plenish:meal-submitted'));
+    }
   };
 
   const handleChipClick = (type: MealType) => {
