@@ -80,6 +80,16 @@ export async function logMeal(
     }
   }
 
+  // Auto-clear any active plan for this slot (soft-mark as overridden)
+  const mealDate = new Date(data.eaten_at).toISOString().split('T')[0];
+  await supabase
+    .from('planned_meals')
+    .update({ status: 'overridden', overridden_meal_id: data.id })
+    .eq('user_id', user.id)
+    .eq('meal_type', mealType)
+    .eq('planned_date', mealDate)
+    .eq('status', 'planned');
+
   // Clear cache for dashboard so the new meal shows up
   revalidatePath('/dashboard');
 

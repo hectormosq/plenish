@@ -166,6 +166,16 @@ export function createMealTools(tzOffsetMinutes: number) {
         .limit(1)
         .maybeSingle();
 
+      // Auto-clear any active plan for this slot
+      const mealDate = new Date(eaten_at ?? new Date().toISOString()).toISOString().split('T')[0];
+      await supabase
+        .from('planned_meals')
+        .update({ status: 'overridden', overridden_meal_id: data.id })
+        .eq('user_id', user.id)
+        .eq('meal_type', meal_type)
+        .eq('planned_date', mealDate)
+        .eq('status', 'planned');
+
       revalidatePath('/dashboard');
       return {
         success: true,

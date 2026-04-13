@@ -125,7 +125,7 @@ const LeftColumn = styled.div`
   gap: 1.5rem;
 `;
 
-export function DashboardLayout({ calendarSlot, recommendationSlot, mealLoggerSlot }: { calendarSlot: ReactNode; recommendationSlot: ReactNode; mealLoggerSlot?: ReactNode }) {
+export function DashboardLayout({ calendarSlot, mealLoggerSlot }: { calendarSlot: ReactNode; mealLoggerSlot?: ReactNode }) {
   const router = useRouter();
 
   async function handleSignOut() {
@@ -160,10 +160,9 @@ export function DashboardLayout({ calendarSlot, recommendationSlot, mealLoggerSl
           {mealLoggerSlot}
         </LeftColumn>
 
-        {/* Right Column — Calendar + Context */}
+        {/* Right Column — Calendar */}
         <RightColumn>
           {calendarSlot}
-          {recommendationSlot}
         </RightColumn>
       </PageContent>
     </DashboardContainer>
