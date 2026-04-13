@@ -38,7 +38,11 @@ yarn-error.log*
 
 # claude
 .claude/settings.local.json
+.claude/worktrees/
 specs/claude/
+
+# playwright mcp
+.playwright-mcp/
 
 # typescript
 *.tsbuildinfo
