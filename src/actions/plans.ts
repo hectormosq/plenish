@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import type { MealType, MealLog } from '@/actions/meals';
 import { generateSinglePlan, generateWeekPlan } from '@/lib/ai/getRecommendation';
+import { getSystemPrompt } from '@/lib/ai/provider';
 
 export interface PlannedMeal {
   id: string;
@@ -72,11 +73,12 @@ export async function getPlannedMeals(weekStart: string, weekEnd: string): Promi
 }
 
 export async function planSingleSlot(mealType: MealType, date: string): Promise<PlannedMeal> {
+  console.log('Planning single slot', { mealType, date });
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) throw new Error('Unauthorized');
 
-  const [{ data: recentData }, rejectedSummary] = await Promise.all([
+  const [{ data: recentData }, rejectedSummary, systemPrompt] = await Promise.all([
     supabase
       .from('meal_logs')
       .select('id, log_text, meal_type, eaten_at')
@@ -84,6 +86,7 @@ export async function planSingleSlot(mealType: MealType, date: string): Promise<
       .order('eaten_at', { ascending: false })
       .limit(10),
     getTopRejectedMeals(user.id),
+    getSystemPrompt(0, user.id, supabase),
   ]);
 
   const recommendation = await generateSinglePlan(
@@ -91,6 +94,7 @@ export async function planSingleSlot(mealType: MealType, date: string): Promise<
     date,
     (recentData ?? []) as MealLog[],
     rejectedSummary,
+    systemPrompt,
   );
 
   const { data, error } = await supabase
@@ -125,7 +129,7 @@ export async function planWeekSlots(
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) throw new Error('Unauthorized');
 
-  const [{ data: recentData }, rejectedSummary] = await Promise.all([
+  const [{ data: recentData }, rejectedSummary, systemPrompt] = await Promise.all([
     supabase
       .from('meal_logs')
       .select('id, log_text, meal_type, eaten_at')
@@ -133,12 +137,14 @@ export async function planWeekSlots(
       .order('eaten_at', { ascending: false })
       .limit(10),
     getTopRejectedMeals(user.id),
+    getSystemPrompt(0, user.id, supabase),
   ]);
 
   const recommendations = await generateWeekPlan(
     slots,
     (recentData ?? []) as MealLog[],
     rejectedSummary,
+    systemPrompt,
   );
 
   const rows = slots.map((slot, i) => ({
@@ -170,6 +176,7 @@ export async function regenerateSlot(
   mealType: MealType,
   date: string,
 ): Promise<PlannedMeal> {
+  console.log('Regenerating slot', { existingId, mealType, date });
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) throw new Error('Unauthorized');

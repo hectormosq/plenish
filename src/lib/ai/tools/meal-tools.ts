@@ -105,7 +105,7 @@ export function createMealTools(tzOffsetMinutes: number) {
       meal_type: z.enum(['breakfast', 'lunch', 'dinner', 'snack'])
         .describe('Type of meal inferred from context.'),
       eaten_at: z.string().optional()
-        .describe('ISO 8601 timestamp of when the meal was eaten. Defaults to now.'),
+        .describe('ISO 8601 timestamp of when the meal was eaten. If the message contains [date: YYYY-MM-DD], set this to YYYY-MM-DDT12:00:00.000Z using that date. Defaults to now only when no date prefix is present.'),
       nutrition: NutritionSchema,
       inferred_ingredients: z.array(z.string()).optional()
         .describe(
@@ -429,6 +429,7 @@ export function createMealTools(tzOffsetMinutes: number) {
         ),
     }),
     execute: async ({ period, scope }) => {
+      console.log('getDailySummaryTool', { period, scope, tz });
       const supabase = await createClient();
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) return { error: 'Unauthorized' };
