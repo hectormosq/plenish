@@ -47,3 +47,10 @@ a {
     color-scheme: dark;
   }
 }
+
+/* ── Mobile: padding so content clears the fixed bottom nav (60px) + iOS safe area ── */
+@media (max-width: 767px) {
+  body {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+}
