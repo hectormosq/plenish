@@ -76,15 +76,25 @@ const PLANNED_BG: Record<MealType, string> = {
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
-function getWeekDays(offset: number = 0): Date[] {
+/** Returns the Monday of the current week with time zeroed out. */
+function getCurrentMonday(): Date {
   const today = new Date();
   const dow = today.getDay(); // 0 = Sun
   const monday = new Date(today);
-  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1) + offset * 7);
+  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
   monday.setHours(0, 0, 0, 0);
-  return Array.from({ length: 7 }, (_, i) => {
+  return monday;
+}
+
+/**
+ * Returns `count` consecutive days starting at (currentMonday + dayOffset).
+ * Positive dayOffset shifts the window forward; negative shifts it back.
+ */
+function getVisibleDays(dayOffset: number, count: number): Date[] {
+  const monday = getCurrentMonday();
+  return Array.from({ length: count }, (_, i) => {
     const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
+    d.setDate(monday.getDate() + dayOffset + i);
     return d;
   });
 }
@@ -111,12 +121,12 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 }
 
-function getWeekLabel(weekDays: Date[], offset: number): string {
-  if (offset === 0) return 'This Week';
-  if (offset === -1) return 'Last Week';
-  if (offset === 1) return 'Next Week';
-  const start = weekDays[0].toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  const end = weekDays[6].toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+function getWindowLabel(visibleDays: Date[], dayOffset: number, count: number): string {
+  if (count === 7 && dayOffset === 0) return 'This Week';
+  if (count === 7 && dayOffset === -7) return 'Last Week';
+  if (count === 7 && dayOffset === 7) return 'Next Week';
+  const start = visibleDays[0].toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const end = visibleDays[visibleDays.length - 1].toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   return `${start} – ${end}`;
 }
 
@@ -203,10 +213,14 @@ const LoadingText = styled.span`
   color: #4b5563;
 `;
 
-const Grid = styled.div`
+const Grid = styled.div<{ $columns: number }>`
   display: grid;
-  grid-template-columns: 88px repeat(7, minmax(80px, 1fr));
-  min-width: 660px;
+  grid-template-columns: 88px repeat(${({ $columns }) => $columns}, minmax(80px, 1fr));
+  min-width: ${({ $columns }) => ($columns >= 7 ? '660px' : 'unset')};
+
+  @media (max-width: 639px) {
+    grid-template-columns: 60px repeat(${({ $columns }) => $columns}, minmax(0, 1fr));
+  }
 `;
 
 const CornerCell = styled.div`
@@ -243,6 +257,11 @@ const RowLabel = styled.div<{ $color: string }>`
   justify-content: flex-end;
   border-right: 1px solid #1a1a1a;
   border-bottom: 1px solid #1a1a1a;
+
+  @media (max-width: 639px) {
+    padding: 0.4rem 0.3rem;
+    justify-content: center;
+  }
 `;
 
 const LabelText = styled.span<{ $color: string }>`
@@ -251,6 +270,14 @@ const LabelText = styled.span<{ $color: string }>`
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: ${({ $color }) => $color};
+
+  @media (max-width: 639px) {
+    font-size: 0.55rem;
+    letter-spacing: 0;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+  }
 `;
 
 const Cell = styled.div<{
@@ -263,6 +290,11 @@ const Cell = styled.div<{
 }>`
   position: relative;
   min-height: 76px;
+
+  @media (max-width: 639px) {
+    min-height: 64px;
+    padding: 0.3rem;
+  }
   padding: 0.4rem;
   border-right: 1px solid #1a1a1a;
   border-bottom: 1px solid #1a1a1a;
@@ -531,6 +563,20 @@ const TipButton = styled.button<{ $variant: 'delete' | 'dismiss' }>`
   }
 `;
 
+// ─── Hooks ────────────────────────────────────────────────────────────────────
+
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface TooltipState {
@@ -549,16 +595,28 @@ export function MealWeekGrid({
   plannedMeals?: PlannedMeal[];
 }) {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [isPending, startTransition] = useTransition();
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
-  const [weekOffset, setWeekOffset] = useState(0);
+  const [dayOffset, setDayOffset] = useState(0);
   const [allMeals, setAllMeals] = useState<CalendarMeal[]>(initialMeals);
   const [loadedDaysBack, setLoadedDaysBack] = useState(initialDaysBack);
   const [allPlannedMeals, setAllPlannedMeals] = useState<PlannedMeal[]>(initialPlannedMeals);
   const [planningSlots, setPlanningSlots] = useState<Set<string>>(new Set());
   const [isPlanningWeek, setIsPlanningWeek] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
+
+  // On mobile, default to showing today in view (shift to today's index in week)
+  const mobileInitialized = useRef(false);
+  useEffect(() => {
+    if (isMobile && !mobileInitialized.current) {
+      mobileInitialized.current = true;
+      const dow = new Date().getDay(); // 0=Sun
+      const indexInWeek = dow === 0 ? 6 : dow - 1; // 0=Mon … 6=Sun
+      setDayOffset(Math.max(0, indexInWeek - 1));
+    }
+  }, [isMobile]);
 
   // Close tooltip on click outside
   useEffect(() => {
@@ -579,17 +637,14 @@ export function MealWeekGrid({
     return () => window.removeEventListener('scroll', close, true);
   }, []);
 
-  const weekDays = getWeekDays(weekOffset);
+  const visibleCount = isMobile ? 3 : 7;
+  const visibleDays = getVisibleDays(dayOffset, visibleCount);
   const todayKey = toDayKey(new Date());
 
-  // Determine how many days back the Monday of the viewed week is
-  const mondayOfView = weekDays[0];
-  const daysUntilMonday = Math.ceil((Date.now() - mondayOfView.getTime()) / (1000 * 60 * 60 * 24));
-
-  const handlePrevWeek = async () => {
-    const newOffset = weekOffset - 1;
-    const newMonday = getWeekDays(newOffset)[0];
-    const daysNeeded = Math.ceil((Date.now() - newMonday.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const handlePrev = async () => {
+    const newOffset = dayOffset - 1;
+    const newFirstDay = getVisibleDays(newOffset, 1)[0];
+    const daysNeeded = Math.ceil((Date.now() - newFirstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
     if (daysNeeded > loadedDaysBack) {
       setIsLoadingMore(true);
@@ -600,29 +655,28 @@ export function MealWeekGrid({
       setIsLoadingMore(false);
     }
 
-    setWeekOffset(newOffset);
+    setDayOffset(newOffset);
   };
 
-  const handleNextWeek = async () => {
-    const newOffset = weekOffset + 1;
+  const handleNext = async () => {
+    const newOffset = dayOffset + 1;
+    const newLastDays = getVisibleDays(newOffset, visibleCount);
+    const newLastDay = newLastDays[newLastDays.length - 1];
+    const newLastDayKey = toDayKey(newLastDay);
 
-    // If navigating to a future week beyond our loaded planned meals range,
-    // fetch more planned meals
-    const newSunday = getWeekDays(newOffset)[6];
-    const newSundayKey = toDayKey(newSunday);
     const maxLoadedPlanned = allPlannedMeals.reduce<string>(
       (max, p) => (p.planned_date > max ? p.planned_date : max),
       todayKey,
     );
 
-    if (newSundayKey > maxLoadedPlanned && newOffset > 0) {
-      const newEnd = new Date(newSunday);
+    if (newLastDayKey > maxLoadedPlanned && newOffset > 0) {
+      const newEnd = new Date(newLastDay);
       newEnd.setDate(newEnd.getDate() + 56); // 8 more weeks buffer
       const morePlanned = await getPlannedMeals(todayKey, newEnd.toISOString().split('T')[0]);
       setAllPlannedMeals(morePlanned);
     }
 
-    setWeekOffset(newOffset);
+    setDayOffset(newOffset);
   };
 
   const handleInfoClick = (e: React.MouseEvent, meal: CalendarMeal) => {
@@ -705,7 +759,7 @@ export function MealWeekGrid({
     try {
       const emptySlots: { mealType: MealType; date: string }[] = [];
       for (const mealType of MEAL_TYPES) {
-        for (const day of weekDays) {
+        for (const day of visibleDays) {
           const dayKey = toDayKey(day);
           if (dayKey < todayKey) continue; // skip past
           const hasLogged = bySlot.has(`${dayKey}-${mealType}`);
@@ -743,25 +797,25 @@ export function MealWeekGrid({
     }
   }
 
-  // Determine if "Plan Week" should be active (current or future week in view)
-  const planWeekActive = weekDays.some((d) => toDayKey(d) >= todayKey);
+  // Determine if "Plan Week" should be active (any visible day is today or future)
+  const planWeekActive = visibleDays.some((d) => toDayKey(d) >= todayKey);
 
   return (
     <Wrapper>
       <Title>
-        <NavButton onClick={handlePrevWeek} disabled={isLoadingMore} title="Previous week">
+        <NavButton onClick={handlePrev} disabled={isLoadingMore} title="Previous">
           <ChevronLeft size={13} />
         </NavButton>
         <span style={{ color: '#3b82f6', fontSize: '0.875rem' }}>📅</span>
         <WeekLabel>
-          {isLoadingMore ? <LoadingText>Loading…</LoadingText> : getWeekLabel(weekDays, weekOffset)}
+          {isLoadingMore ? <LoadingText>Loading…</LoadingText> : getWindowLabel(visibleDays, dayOffset, visibleCount)}
         </WeekLabel>
         {planWeekActive && (
           <PlanWeekButton
             onClick={handlePlanWeek}
             disabled={isPlanningWeek}
             $loading={isPlanningWeek}
-            title="Plan all empty slots this week"
+            title="Plan all empty slots in view"
           >
             {isPlanningWeek ? (
               <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} />
@@ -771,15 +825,15 @@ export function MealWeekGrid({
             Plan Week
           </PlanWeekButton>
         )}
-        <NavButton onClick={handleNextWeek} title="Next week">
+        <NavButton onClick={handleNext} title="Next">
           <ChevronRight size={13} />
         </NavButton>
       </Title>
 
-      <Grid>
+      <Grid $columns={visibleCount}>
         {/* Header row */}
         <CornerCell />
-        {weekDays.map((day) => {
+        {visibleDays.map((day) => {
           const key = toDayKey(day);
           const isToday = key === todayKey;
           return (
@@ -797,7 +851,7 @@ export function MealWeekGrid({
               <LabelText $color={MEAL_COLOR[mealType]}>{MEAL_LABELS[mealType]}</LabelText>
             </RowLabel>
 
-            {weekDays.map((day) => {
+            {visibleDays.map((day) => {
               const dayKey = toDayKey(day);
               const isToday = dayKey === todayKey;
               const slotKey = `${dayKey}-${mealType}`;
