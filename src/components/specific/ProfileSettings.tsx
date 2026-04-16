@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition } from 'react';
 import styled from 'styled-components';
-import { updateShareDefault } from '@/actions/profile';
+import { updateShareDefault, updateChatPanelSide } from '@/actions/profile';
 import { User } from 'lucide-react';
 import { Card, CardTitle } from '@/components/ui/Card';
 
@@ -68,29 +68,36 @@ const ErrorText = styled.p`
 
 interface Props {
   initialShareDefault: 'just-me' | 'all';
+  initialChatPanelSide: 'left' | 'right';
 }
 
-export function ProfileSettings({ initialShareDefault }: Props) {
+export function ProfileSettings({ initialShareDefault, initialChatPanelSide }: Props) {
   const [shareDefault, setShareDefault] = useState<'just-me' | 'all'>(initialShareDefault);
+  const [chatPanelSide, setChatPanelSide] = useState<'left' | 'right'>(initialChatPanelSide);
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const handleChange = (value: 'just-me' | 'all') => {
-    if (value === shareDefault || isPending) return;
-    setShareDefault(value);
+  function startSave<T>(
+    current: T,
+    next: T,
+    setter: (v: T) => void,
+    action: (v: T) => Promise<{ success: true }>,
+  ) {
+    if (next === current || isPending) return;
+    setter(next);
     setSaved(false);
     setSaveError(null);
     startTransition(async () => {
       try {
-        await updateShareDefault(value);
+        await action(next);
         setSaved(true);
       } catch (e) {
         setSaveError((e as Error).message);
-        setShareDefault(shareDefault); // revert optimistic update
+        setter(current);
       }
     });
-  };
+  }
 
   return (
     <Card>
@@ -98,6 +105,7 @@ export function ProfileSettings({ initialShareDefault }: Props) {
         <User size={20} color="#a855f7" />
         Profile
       </CardTitle>
+
       <SettingRow>
         <div>
           <SettingLabel>Default sharing</SettingLabel>
@@ -106,20 +114,44 @@ export function ProfileSettings({ initialShareDefault }: Props) {
         <ToggleGroup>
           <ToggleChip
             $active={shareDefault === 'just-me'}
-            onClick={() => handleChange('just-me')}
+            onClick={() => startSave(shareDefault, 'just-me', setShareDefault, updateShareDefault)}
             disabled={isPending}
           >
-            👤 Just me
+            Just me
           </ToggleChip>
           <ToggleChip
             $active={shareDefault === 'all'}
-            onClick={() => handleChange('all')}
+            onClick={() => startSave(shareDefault, 'all', setShareDefault, updateShareDefault)}
             disabled={isPending}
           >
-            👥 All
+            All
           </ToggleChip>
         </ToggleGroup>
       </SettingRow>
+
+      <SettingRow>
+        <div>
+          <SettingLabel>Chat panel position</SettingLabel>
+          <SettingHint>Side the agent panel opens on wide screens</SettingHint>
+        </div>
+        <ToggleGroup>
+          <ToggleChip
+            $active={chatPanelSide === 'left'}
+            onClick={() => startSave(chatPanelSide, 'left', setChatPanelSide, updateChatPanelSide)}
+            disabled={isPending}
+          >
+            Left
+          </ToggleChip>
+          <ToggleChip
+            $active={chatPanelSide === 'right'}
+            onClick={() => startSave(chatPanelSide, 'right', setChatPanelSide, updateChatPanelSide)}
+            disabled={isPending}
+          >
+            Right
+          </ToggleChip>
+        </ToggleGroup>
+      </SettingRow>
+
       {saved && <SavedText>Saved.</SavedText>}
       {saveError && <ErrorText>{saveError}</ErrorText>}
     </Card>

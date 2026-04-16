@@ -27,3 +27,26 @@ export async function updateShareDefault(value: 'just-me' | 'all'): Promise<{ su
   revalidatePath('/dashboard');
   return { success: true };
 }
+
+export async function getChatPanelSide(): Promise<'left' | 'right'> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const pref = user?.user_metadata?.chat_panel_side;
+  return pref === 'left' ? 'left' : 'right';
+}
+
+export async function updateChatPanelSide(value: 'left' | 'right'): Promise<{ success: true }> {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) throw new Error('Unauthorized');
+
+  const { error } = await supabase.auth.updateUser({
+    data: { chat_panel_side: value },
+  });
+
+  if (error) throw new Error('Failed to update chat panel side.');
+
+  revalidatePath('/settings');
+  revalidatePath('/dashboard');
+  return { success: true };
+}
