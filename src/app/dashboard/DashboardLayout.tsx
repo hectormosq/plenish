@@ -3,16 +3,35 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import Link from "next/link";
-import styled, { keyframes } from "styled-components";
-import { Utensils, LogOut, Settings, PlusCircle } from "lucide-react";
+import styled, { keyframes, css } from "styled-components";
+import { Utensils, LogOut, Settings, MessageSquare, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { MealLoggerBottomSheet } from "@/components/specific/MealLoggerBottomSheet";
 import { SessionLoggerProvider } from "ai-session-logger/next";
 
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(-8px); }
   to   { opacity: 1; transform: translateY(0); }
+`;
+
+const slideInRight = keyframes`
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+`;
+
+const slideOutRight = keyframes`
+  from { transform: translateX(0); }
+  to   { transform: translateX(100%); }
+`;
+
+const slideUp = keyframes`
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+`;
+
+const slideDown = keyframes`
+  from { transform: translateY(0); }
+  to   { transform: translateY(100%); }
 `;
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
@@ -80,7 +99,6 @@ const SettingsLink = styled(Link)`
     background: rgba(255, 255, 255, 0.04);
   }
 
-  /* Settings link in top nav not needed on mobile — bottom nav handles it */
   @media (max-width: 767px) {
     display: none;
   }
@@ -107,7 +125,7 @@ const SignOutButton = styled.button`
   }
 `;
 
-// ─── Dashboard 2-column grid ──────────────────────────────────────────────────
+// ─── Page content — full-width calendar ───────────────────────────────────────
 
 const PageContent = styled.main`
   flex: 1;
@@ -115,34 +133,14 @@ const PageContent = styled.main`
   max-width: 1600px;
   width: 100%;
   margin: 0 auto;
-  display: grid;
-  gap: 1.5rem;
-  grid-template-columns: 1fr;
   animation: ${fadeIn} 0.4s ease 0.1s both;
 
-  @media (min-width: 1024px) {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+  @media (max-width: 639px) {
+    padding: 0.75rem 0.5rem;
   }
 `;
 
-const RightColumn = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-`;
-
-/** On mobile, the inline MealLogger is hidden — the FAB + sheet take over */
-const LeftColumn = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-
-  @media (max-width: 767px) {
-    display: none;
-  }
-`;
-
-// ─── Full-width slot for Coming Soon pages (History, Recipes) ─────────────────
+// ─── Full-width slot for non-dashboard pages ──────────────────────────────────
 
 const FullWidthContent = styled.main`
   flex: 1;
@@ -153,13 +151,194 @@ const FullWidthContent = styled.main`
   animation: ${fadeIn} 0.4s ease 0.1s both;
 `;
 
-// ─── FAB — mobile only ────────────────────────────────────────────────────────
+// ─── Chat Drawer — desktop ────────────────────────────────────────────────────
+
+const DrawerBackdrop = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: ${fadeIn} 0.2s ease forwards;
+
+  /* Desktop only */
+  @media (max-width: 767px) {
+    display: none;
+  }
+`;
+
+const Drawer = styled.div<{ $closing: boolean; $side: 'left' | 'right' }>`
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  ${({ $side }) => $side === 'right' ? 'right: 0;' : 'left: 0;'}
+  width: 420px;
+  z-index: 100;
+  background: #111;
+  border-${({ $side }) => $side === 'right' ? 'left' : 'right'}: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  box-shadow: ${({ $side }) =>
+    $side === 'right'
+      ? '-8px 0 32px rgba(0,0,0,0.5)'
+      : '8px 0 32px rgba(0,0,0,0.5)'};
+
+  animation: ${({ $closing, $side }) =>
+    $closing
+      ? css`${slideOutRight} 0.28s ease forwards`
+      : css`${slideInRight} 0.32s cubic-bezier(0.32, 0.72, 0, 1) forwards`};
+
+  /* Desktop only */
+  @media (max-width: 767px) {
+    display: none;
+  }
+`;
+
+const DrawerHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+`;
+
+const DrawerTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #a855f7;
+  font-weight: 600;
+  font-size: 0.95rem;
+`;
+
+const DrawerCloseButton = styled.button`
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  color: #888;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #f0f0f0;
+  }
+`;
+
+const DrawerBody = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 1rem 1rem;
+
+  > * {
+    height: 100% !important;
+  }
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+`;
+
+// ─── Bottom sheet — mobile ────────────────────────────────────────────────────
+
+const SheetBackdrop = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: ${fadeIn} 0.2s ease forwards;
+
+  @media (min-width: 768px) {
+    display: none;
+  }
+`;
+
+const Sheet = styled.div<{ $closing: boolean }>`
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  height: 90vh;
+  background: #111;
+  border-radius: 20px 20px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  animation: ${({ $closing }) =>
+    $closing
+      ? css`${slideDown} 0.3s ease forwards`
+      : css`${slideUp} 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards`};
+
+  @media (min-width: 768px) {
+    display: none;
+  }
+`;
+
+const SheetHandle = styled.div`
+  width: 36px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  margin: 12px auto 0;
+  flex-shrink: 0;
+`;
+
+const SheetHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0.75rem 1rem 0;
+  flex-shrink: 0;
+`;
+
+const SheetCloseButton = styled.button`
+  background: rgba(255, 255, 255, 0.07);
+  border: none;
+  color: #aaa;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #f0f0f0;
+  }
+`;
+
+const SheetBody = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 1rem 1rem;
+
+  > * {
+    height: 100% !important;
+  }
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+`;
+
+// ─── FAB ──────────────────────────────────────────────────────────────────────
 
 const FAB = styled.button`
   position: fixed;
-  bottom: 76px; /* sits above the 60px bottom nav */
-  right: 1.5rem;
-  z-index: 90;
+  z-index: 89;
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -171,19 +350,22 @@ const FAB = styled.button`
   justify-content: center;
   cursor: pointer;
   box-shadow: 0 4px 20px rgba(72, 199, 142, 0.4);
-  transition:
-    transform 0.2s,
-    box-shadow 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
   -webkit-tap-highlight-color: transparent;
+
+  /* Mobile: above bottom nav */
+  bottom: 76px;
+  right: 1.5rem;
+
+  /* Desktop: bottom-right corner */
+  @media (min-width: 768px) {
+    bottom: 1.5rem;
+    right: 1.5rem;
+  }
 
   &:active {
     transform: scale(0.93);
     box-shadow: 0 2px 12px rgba(72, 199, 142, 0.3);
-  }
-
-  /* Desktop: hide FAB — inline MealLogger is shown instead */
-  @media (min-width: 768px) {
-    display: none;
   }
 `;
 
@@ -191,12 +373,11 @@ const FAB = styled.button`
 
 interface DashboardLayoutProps {
   userId?: string;
-  /** Left column: inline MealLogger (hidden on mobile, replaced by FAB+sheet) */
   mealLoggerSlot?: ReactNode;
-  /** Right column: calendar grid */
   calendarSlot?: ReactNode;
-  /** Full-width slot for Coming Soon pages (History, Recipes) — replaces grid layout */
   comingSoonSlot?: ReactNode;
+  /** Which side the chat drawer opens on desktop. Defaults to 'right'. */
+  chatSide?: 'left' | 'right';
 }
 
 export function DashboardLayout({
@@ -204,15 +385,30 @@ export function DashboardLayout({
   calendarSlot,
   mealLoggerSlot,
   comingSoonSlot,
+  chatSide = 'right',
 }: DashboardLayoutProps) {
   const router = useRouter();
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
 
   async function handleSignOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
+  }
+
+  function handleOpen() {
+    setClosing(false);
+    setOpen(true);
+  }
+
+  function handleClose() {
+    setClosing(true);
+    setTimeout(() => {
+      setOpen(false);
+      setClosing(false);
+    }, 300);
   }
 
   return (
@@ -238,33 +434,51 @@ export function DashboardLayout({
 
         {/* ── Page body ───────────────────────────────────────────────── */}
         {comingSoonSlot ? (
-          /* Coming Soon pages: full-width, no grid */
           <FullWidthContent>{comingSoonSlot}</FullWidthContent>
         ) : (
-          /* Dashboard: 2-column grid */
-          <PageContent>
-            {/* Left Column — inline chat (desktop) */}
-            <LeftColumn>{mealLoggerSlot}</LeftColumn>
-
-            {/* Right Column — calendar */}
-            <RightColumn>{calendarSlot}</RightColumn>
-          </PageContent>
+          <PageContent>{calendarSlot}</PageContent>
         )}
 
-        {/* ── Mobile FAB + Bottom Sheet ────────────────────────────────── */}
-        {mealLoggerSlot && (
+        {/* ── Desktop Chat Drawer ──────────────────────────────────────── */}
+        {mealLoggerSlot && open && (
           <>
-            <FAB aria-label="Log a meal" onClick={() => setSheetOpen(true)}>
-              <PlusCircle size={26} />
-            </FAB>
-
-            <MealLoggerBottomSheet
-              isOpen={sheetOpen}
-              onClose={() => setSheetOpen(false)}
-            >
-              {mealLoggerSlot}
-            </MealLoggerBottomSheet>
+            <DrawerBackdrop onClick={handleClose} />
+            <Drawer $closing={closing} $side={chatSide}>
+              <DrawerHeader>
+                <DrawerTitle>
+                  <MessageSquare size={16} />
+                  Plenish Agent
+                </DrawerTitle>
+                <DrawerCloseButton onClick={handleClose} aria-label="Close chat">
+                  <X size={15} />
+                </DrawerCloseButton>
+              </DrawerHeader>
+              <DrawerBody>{mealLoggerSlot}</DrawerBody>
+            </Drawer>
           </>
+        )}
+
+        {/* ── Mobile Bottom Sheet ──────────────────────────────────────── */}
+        {mealLoggerSlot && open && (
+          <>
+            <SheetBackdrop onClick={handleClose} />
+            <Sheet $closing={closing}>
+              <SheetHandle />
+              <SheetHeader>
+                <SheetCloseButton onClick={handleClose} aria-label="Close chat">
+                  <X size={16} />
+                </SheetCloseButton>
+              </SheetHeader>
+              <SheetBody>{mealLoggerSlot}</SheetBody>
+            </Sheet>
+          </>
+        )}
+
+        {/* ── FAB — all screen sizes ───────────────────────────────────── */}
+        {mealLoggerSlot && !open && (
+          <FAB aria-label="Open chat" onClick={handleOpen}>
+            <MessageSquare size={24} />
+          </FAB>
         )}
       </DashboardContainer>
     </SessionLoggerProvider>
