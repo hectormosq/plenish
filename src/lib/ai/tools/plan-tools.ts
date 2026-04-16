@@ -16,7 +16,8 @@ function getWeekBounds(): { start: string; end: string } {
   return { start: today, end: sunday.toISOString().split('T')[0] };
 }
 
-export const planMealsTool = tool({
+export function createPlanMealsTool(sessionId?: string) {
+return tool({
   description:
     'Generate and save AI meal recommendations for specific slots or the rest of the current week. ' +
     'Use this when the user asks to plan meals, get suggestions for specific days/meal types, or fill their week with meal ideas. ' +
@@ -62,6 +63,7 @@ export const planMealsTool = tool({
         const planned = await planSingleSlot(
           slots[0].mealType as MealType,
           slots[0].date,
+          sessionId,
         );
         return {
           planned: [planned],
@@ -71,6 +73,7 @@ export const planMealsTool = tool({
 
       const planned = await planWeekSlots(
         slots.map(s => ({ mealType: s.mealType as MealType, date: s.date })),
+        sessionId,
       );
       return {
         planned,
@@ -121,7 +124,7 @@ export const planMealsTool = tool({
       };
     }
 
-    const planned = await planWeekSlots(emptySlots);
+    const planned = await planWeekSlots(emptySlots, sessionId);
     return {
       planned,
       summary: `Planifiqué ${planned.length} comidas: ${planned
@@ -130,3 +133,4 @@ export const planMealsTool = tool({
     };
   },
 });
+}

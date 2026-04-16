@@ -25,7 +25,6 @@ export async function LogMealFormWrapper({ initialMealType, initialText, initial
   return (
     <MealLogger
       householdMembers={members}
-      householdId={household?.id ?? null}
       defaultShareState={shareDefault}
       initialMealType={initialMealType}
       initialText={initialText}

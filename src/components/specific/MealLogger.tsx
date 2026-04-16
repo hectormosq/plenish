@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
@@ -10,6 +10,7 @@ import type { MealType } from '@/actions/meals';
 import type { HouseholdMemberSimple } from '@/actions/households';
 import { MessageSquare, Send, Loader2, X, Pencil } from 'lucide-react';
 import { MemberPickerPopover } from '@/components/specific/MemberPickerPopover';
+import { useSessionLogger } from 'ai-session-logger/next';
 
 // ─── Styled Components (from AIChatBox) ────────────────────────────────────
 
@@ -281,7 +282,6 @@ const EditIconButton = styled.button`
 
 interface MealLoggerProps {
   householdMembers?: HouseholdMemberSimple[];
-  householdId?: string | null;
   defaultShareState?: 'just-me' | 'all';
   initialMealType?: MealType;
   initialText?: string;
@@ -292,26 +292,46 @@ const MEAL_TYPES = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
 
 export function MealLogger({
   householdMembers = [],
-  householdId = null,
   defaultShareState = 'all',
   initialMealType,
   initialText,
   initialDate,
 }: MealLoggerProps) {
   const router = useRouter();
-  const { messages, status, error, sendMessage } = useChat({
-    transport: new DefaultChatTransport({
-      body: { tzOffset: new Date().getTimezoneOffset() },
+  const { session } = useSessionLogger();
+  const chatTransport = useMemo(
+    () => new DefaultChatTransport({
+      body: { tzOffset: new Date().getTimezoneOffset(), sessionId: session.sessionId },
     }),
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  const { messages, status, error, sendMessage } = useChat({ transport: chatTransport });
   const isLoading = status === 'streaming' || status === 'submitted';
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const prevStatus = useRef(status);
 
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, error]);
+
+  // Log AI response when streaming completes
+  useEffect(() => {
+    if (
+      (prevStatus.current === 'streaming' || prevStatus.current === 'submitted') &&
+      status === 'ready'
+    ) {
+      const last = messages[messages.length - 1];
+      if (last?.role === 'assistant') {
+        const text = last.parts?.filter((p) => p.type === 'text').map((p) => p.text).join('') ?? '';
+        session.aiResponse({ text });
+      }
+    }
+    prevStatus.current = status;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
   // Clear prefill URL params after mount so they don't persist on refresh
   useEffect(() => {
@@ -387,6 +407,11 @@ export function MealLogger({
     }
     const text = parts.length > 0 ? `${parts.join(' ')} ${localInput}` : localInput;
 
+    session.userMessage(localInput, {
+      mealType: selectedMealType,
+      date: selectedDate ?? todayISO(),
+      shareState,
+    });
     sendMessage({ text });
     setLocalInput('');
     setSelectedMealType(null);
@@ -398,7 +423,9 @@ export function MealLogger({
   };
 
   const handleChipClick = (type: MealType) => {
-    setSelectedMealType((prev) => (prev === type ? null : type));
+    const next = selectedMealType === type ? null : type;
+    session.buttonClick('meal_type_selected', { type, active: next !== null });
+    setSelectedMealType(next);
   };
 
   const handleDateChipClick = () => {
@@ -406,11 +433,15 @@ export function MealLogger({
   };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedDate(e.target.value || null);
+    const date = e.target.value || null;
+    setSelectedDate(date);
+    session.buttonClick('date_selected', { date: date ?? todayISO() });
   };
 
   // FR-001: primary click toggles just-me ↔ all (fast path)
   const handleShareClick = () => {
+    const next = shareState === 'just-me' ? 'all' : 'just-me';
+    session.buttonClick('share_toggled', { from: shareState, to: next });
     if (shareState === 'just-me') {
       setShareState('all');
       setSelectedCoEaters(new Set(householdMembers.map((m) => m.user_id)));
@@ -431,16 +462,21 @@ export function MealLogger({
   // FR-005: confirm from picker determines state
   const handlePickerConfirm = (picked: Set<string>) => {
     setPickerOpen(false);
+    let next: 'just-me' | 'all' | 'partial';
     if (picked.size === 0) {
+      next = 'just-me';
       setShareState('just-me');
       setSelectedCoEaters(new Set());
     } else if (picked.size === householdMembers.length) {
+      next = 'all';
       setShareState('all');
       setSelectedCoEaters(picked);
     } else {
+      next = 'partial';
       setShareState('partial');
       setSelectedCoEaters(picked);
     }
+    session.buttonClick('co_eaters_confirmed', { share_state: next, count: picked.size });
   };
 
   // ─── Render ────────────────────────────────────────────────────
