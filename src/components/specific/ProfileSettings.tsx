@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition } from 'react';
 import styled from 'styled-components';
-import { updateShareDefault, updateChatPanelSide } from '@/actions/profile';
+import { updateShareDefault, updateChatPanelSide, updateChatPanelDefaultOpen } from '@/actions/profile';
 import { User } from 'lucide-react';
 import { Card, CardTitle } from '@/components/ui/Card';
 
@@ -69,11 +69,13 @@ const ErrorText = styled.p`
 interface Props {
   initialShareDefault: 'just-me' | 'all';
   initialChatPanelSide: 'left' | 'right';
+  initialChatPanelDefaultOpen: boolean;
 }
 
-export function ProfileSettings({ initialShareDefault, initialChatPanelSide }: Props) {
+export function ProfileSettings({ initialShareDefault, initialChatPanelSide, initialChatPanelDefaultOpen }: Props) {
   const [shareDefault, setShareDefault] = useState<'just-me' | 'all'>(initialShareDefault);
   const [chatPanelSide, setChatPanelSide] = useState<'left' | 'right'>(initialChatPanelSide);
+  const [chatPanelDefaultOpen, setChatPanelDefaultOpen] = useState<boolean>(initialChatPanelDefaultOpen);
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -148,6 +150,29 @@ export function ProfileSettings({ initialShareDefault, initialChatPanelSide }: P
             disabled={isPending}
           >
             Right
+          </ToggleChip>
+        </ToggleGroup>
+      </SettingRow>
+
+      <SettingRow>
+        <div>
+          <SettingLabel>Chat panel default state</SettingLabel>
+          <SettingHint>Whether the panel starts open when you load the dashboard</SettingHint>
+        </div>
+        <ToggleGroup>
+          <ToggleChip
+            $active={chatPanelDefaultOpen}
+            onClick={() => startSave(chatPanelDefaultOpen, true, setChatPanelDefaultOpen, updateChatPanelDefaultOpen)}
+            disabled={isPending}
+          >
+            Open
+          </ToggleChip>
+          <ToggleChip
+            $active={!chatPanelDefaultOpen}
+            onClick={() => startSave(chatPanelDefaultOpen, false, setChatPanelDefaultOpen, updateChatPanelDefaultOpen)}
+            disabled={isPending}
+          >
+            Closed
           </ToggleChip>
         </ToggleGroup>
       </SettingRow>

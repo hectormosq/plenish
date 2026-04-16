@@ -50,3 +50,25 @@ export async function updateChatPanelSide(value: 'left' | 'right'): Promise<{ su
   revalidatePath('/dashboard');
   return { success: true };
 }
+
+export async function getChatPanelDefaultOpen(): Promise<boolean> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.user_metadata?.chat_panel_default_open === true;
+}
+
+export async function updateChatPanelDefaultOpen(value: boolean): Promise<{ success: true }> {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) throw new Error('Unauthorized');
+
+  const { error } = await supabase.auth.updateUser({
+    data: { chat_panel_default_open: value },
+  });
+
+  if (error) throw new Error('Failed to update chat panel default open.');
+
+  revalidatePath('/settings');
+  revalidatePath('/dashboard');
+  return { success: true };
+}

@@ -5,7 +5,7 @@ import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { Suspense } from 'react';
 import type { MealType } from '@/actions/meals';
 import { createClient } from '@/lib/supabase/server';
-import { getChatPanelSide } from '@/actions/profile';
+import { getChatPanelSide, getChatPanelDefaultOpen } from '@/actions/profile';
 
 export default async function DashboardPage({
   searchParams,
@@ -17,7 +17,10 @@ export default async function DashboardPage({
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const userId = user?.id ?? 'anonymous';
-  const chatSide = await getChatPanelSide();
+  const [chatSide, chatDefaultOpen] = await Promise.all([
+    getChatPanelSide(),
+    getChatPanelDefaultOpen(),
+  ]);
 
   const prefillType = params.prefillType as MealType | undefined;
   const prefillText = params.prefillText;
@@ -27,6 +30,7 @@ export default async function DashboardPage({
     <DashboardLayout
       userId={userId}
       chatSide={chatSide}
+      defaultOpen={chatDefaultOpen}
       mealLoggerSlot={
         <Suspense fallback={<SkeletonCard />}>
           <LogMealFormWrapper

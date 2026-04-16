@@ -361,6 +361,8 @@ interface DashboardLayoutProps {
   comingSoonSlot?: ReactNode;
   /** Which side the chat panel opens on. Defaults to 'right'. */
   chatSide?: 'left' | 'right';
+  /** Whether the chat panel starts open. Defaults to false. */
+  defaultOpen?: boolean;
 }
 
 export function DashboardLayout({
@@ -369,9 +371,10 @@ export function DashboardLayout({
   mealLoggerSlot,
   comingSoonSlot,
   chatSide = 'right',
+  defaultOpen = false,
 }: DashboardLayoutProps) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [closing, setClosing] = useState(false);
 
   async function handleSignOut() {
