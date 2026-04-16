@@ -137,9 +137,9 @@ const Wrapper = styled.div`
   background: #111;
   border: 1px solid #1e1e1e;
   border-radius: 16px;
-  overflow-x: auto;
-  overflow-y: visible;
+  overflow: visible;
   position: relative;
+  width: 100%;
 `;
 
 const Title = styled.div`
@@ -216,8 +216,8 @@ const LoadingText = styled.span`
 
 const Grid = styled.div<{ $columns: number }>`
   display: grid;
+  width: 100%;
   grid-template-columns: 88px repeat(${({ $columns }) => $columns}, minmax(80px, 1fr));
-  min-width: ${({ $columns }) => ($columns >= 7 ? '660px' : 'unset')};
 
   @media (max-width: 639px) {
     grid-template-columns: 60px repeat(${({ $columns }) => $columns}, minmax(0, 1fr));

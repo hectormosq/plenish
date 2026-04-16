@@ -3,11 +3,10 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import Link from "next/link";
-import styled, { keyframes } from "styled-components";
-import { Utensils, LogOut, Settings, PlusCircle } from "lucide-react";
+import styled, { keyframes, css } from "styled-components";
+import { Utensils, LogOut, Settings, MessageSquare, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { MealLoggerBottomSheet } from "@/components/specific/MealLoggerBottomSheet";
 import { SessionLoggerProvider } from "ai-session-logger/next";
 
 const fadeIn = keyframes`
@@ -15,10 +14,45 @@ const fadeIn = keyframes`
   to   { opacity: 1; transform: translateY(0); }
 `;
 
-// ─── Nav ──────────────────────────────────────────────────────────────────────
+const fadeOut = keyframes`
+  from { opacity: 1; }
+  to   { opacity: 0; }
+`;
+
+// Right-side overlay slide
+const slideInRight = keyframes`
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+`;
+const slideOutRight = keyframes`
+  from { transform: translateX(0); }
+  to   { transform: translateX(100%); }
+`;
+
+// Left-side overlay slide
+const slideInLeft = keyframes`
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+`;
+const slideOutLeft = keyframes`
+  from { transform: translateX(0); }
+  to   { transform: translateX(-100%); }
+`;
+
+// Mobile bottom sheet
+const slideUp = keyframes`
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+`;
+const slideDown = keyframes`
+  from { transform: translateY(0); }
+  to   { transform: translateY(100%); }
+`;
+
+// ─── Shell ────────────────────────────────────────────────────────────────────
 
 const DashboardContainer = styled.div`
-  min-height: 100vh;
+  height: 100vh;
   background-color: #0a0c0a;
   color: #f0f0f0;
   font-family: var(--font-geist-sans), sans-serif;
@@ -26,17 +60,20 @@ const DashboardContainer = styled.div`
   flex-direction: column;
 `;
 
+// ─── Nav ──────────────────────────────────────────────────────────────────────
+
 const NavBar = styled.nav`
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 1rem 2rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(10, 12, 10, 0.85);
+  background: rgba(10, 12, 10, 0.95);
   backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
   z-index: 10;
+  flex-shrink: 0;
   animation: ${fadeIn} 0.3s ease forwards;
 `;
 
@@ -80,7 +117,6 @@ const SettingsLink = styled(Link)`
     background: rgba(255, 255, 255, 0.04);
   }
 
-  /* Settings link in top nav not needed on mobile — bottom nav handles it */
   @media (max-width: 767px) {
     display: none;
   }
@@ -107,59 +143,176 @@ const SignOutButton = styled.button`
   }
 `;
 
-// ─── Dashboard 2-column grid ──────────────────────────────────────────────────
+// ─── Body row (calendar + optional side panel) ────────────────────────────────
 
-const PageContent = styled.main`
+const BodyRow = styled.div`
   flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+`;
+
+const CalendarArea = styled.main`
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
   padding: 1.25rem 1.5rem;
-  max-width: 1600px;
-  width: 100%;
-  margin: 0 auto;
-  display: grid;
-  gap: 1.5rem;
-  grid-template-columns: 1fr;
+  order: 1;
   animation: ${fadeIn} 0.4s ease 0.1s both;
 
-  @media (min-width: 1024px) {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+  @media (max-width: 639px) {
+    padding: 0.75rem 0.5rem;
   }
 `;
 
-const RightColumn = styled.div`
+// ─── Unified chat panel — static side panel at ≥900px, overlay below ─────────
+
+const ChatPanel = styled.div<{ $closing: boolean; $side: 'left' | 'right' }>`
+  background: #111;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  overflow: hidden;
+
+  /* ── ≥ 900px: static side panel ── */
+  @media (min-width: 900px) {
+    position: relative;
+    width: clamp(360px, 38vw, 560px);
+    flex-shrink: 0;
+    order: ${({ $side }) => $side === 'right' ? 2 : 0};
+    ${({ $side }) => $side === 'right'
+      ? 'border-left: 1px solid rgba(255,255,255,0.08);'
+      : 'border-right: 1px solid rgba(255,255,255,0.08);'}
+    animation: ${({ $closing }) =>
+      $closing ? css`${fadeOut} 0.18s ease forwards` : 'none'};
+  }
+
+  /* ── 640px – 899px: fixed overlay drawer ── */
+  @media (min-width: 640px) and (max-width: 899px) {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    ${({ $side }) => $side === 'right' ? 'right: 0;' : 'left: 0;'}
+    width: 420px;
+    z-index: 100;
+    ${({ $side }) => $side === 'right'
+      ? 'border-left: 1px solid rgba(255,255,255,0.08); box-shadow: -8px 0 32px rgba(0,0,0,0.5);'
+      : 'border-right: 1px solid rgba(255,255,255,0.08); box-shadow: 8px 0 32px rgba(0,0,0,0.5);'}
+    animation: ${({ $closing, $side }) => {
+      if ($side === 'right') {
+        return $closing
+          ? css`${slideOutRight} 0.28s ease forwards`
+          : css`${slideInRight} 0.32s cubic-bezier(0.32, 0.72, 0, 1) forwards`;
+      }
+      return $closing
+        ? css`${slideOutLeft} 0.28s ease forwards`
+        : css`${slideInLeft} 0.32s cubic-bezier(0.32, 0.72, 0, 1) forwards`;
+    }};
+  }
+
+  /* ── < 640px: bottom sheet ── */
+  @media (max-width: 639px) {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    height: 90vh;
+    border-radius: 20px 20px 0 0;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    animation: ${({ $closing }) =>
+      $closing
+        ? css`${slideDown} 0.3s ease forwards`
+        : css`${slideUp} 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards`};
+  }
 `;
 
-/** On mobile, the inline MealLogger is hidden — the FAB + sheet take over */
-const LeftColumn = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+// ─── Panel inner chrome ───────────────────────────────────────────────────────
 
-  @media (max-width: 767px) {
+// Drag handle — mobile only
+const SheetHandle = styled.div`
+  width: 36px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  margin: 12px auto 0;
+  flex-shrink: 0;
+
+  @media (min-width: 640px) {
     display: none;
   }
 `;
 
-// ─── Full-width slot for Coming Soon pages (History, Recipes) ─────────────────
-
-const FullWidthContent = styled.main`
-  flex: 1;
-  padding: 1.25rem 1.5rem;
-  max-width: 1200px;
-  width: 100%;
-  margin: 0 auto;
-  animation: ${fadeIn} 0.4s ease 0.1s both;
+const PanelHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
 `;
 
-// ─── FAB — mobile only ────────────────────────────────────────────────────────
+const PanelTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #a855f7;
+  font-weight: 600;
+  font-size: 0.95rem;
+`;
+
+const PanelCloseButton = styled.button`
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  color: #888;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #f0f0f0;
+  }
+`;
+
+const PanelBody = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 1rem 1rem;
+
+  > * {
+    height: 100% !important;
+  }
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+`;
+
+// ─── Backdrop — only shown at overlay breakpoints (< 900px) ──────────────────
+
+const Backdrop = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: ${fadeIn} 0.2s ease forwards;
+
+  @media (min-width: 900px) {
+    display: none;
+  }
+`;
+
+// ─── FAB ──────────────────────────────────────────────────────────────────────
 
 const FAB = styled.button`
   position: fixed;
-  bottom: 76px; /* sits above the 60px bottom nav */
-  right: 1.5rem;
-  z-index: 90;
+  z-index: 89;
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -171,32 +324,45 @@ const FAB = styled.button`
   justify-content: center;
   cursor: pointer;
   box-shadow: 0 4px 20px rgba(72, 199, 142, 0.4);
-  transition:
-    transform 0.2s,
-    box-shadow 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
   -webkit-tap-highlight-color: transparent;
+
+  bottom: 76px;
+  right: 1.5rem;
+
+  @media (min-width: 768px) {
+    bottom: 1.5rem;
+    right: 1.5rem;
+  }
 
   &:active {
     transform: scale(0.93);
     box-shadow: 0 2px 12px rgba(72, 199, 142, 0.3);
   }
+`;
 
-  /* Desktop: hide FAB — inline MealLogger is shown instead */
-  @media (min-width: 768px) {
-    display: none;
-  }
+// ─── Coming-soon full-width slot ──────────────────────────────────────────────
+
+const FullWidthContent = styled.main`
+  flex: 1;
+  padding: 1.25rem 1.5rem;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  animation: ${fadeIn} 0.4s ease 0.1s both;
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface DashboardLayoutProps {
   userId?: string;
-  /** Left column: inline MealLogger (hidden on mobile, replaced by FAB+sheet) */
   mealLoggerSlot?: ReactNode;
-  /** Right column: calendar grid */
   calendarSlot?: ReactNode;
-  /** Full-width slot for Coming Soon pages (History, Recipes) — replaces grid layout */
   comingSoonSlot?: ReactNode;
+  /** Which side the chat panel opens on. Defaults to 'right'. */
+  chatSide?: 'left' | 'right';
+  /** Whether the chat panel starts open. Defaults to false. */
+  defaultOpen?: boolean;
 }
 
 export function DashboardLayout({
@@ -204,15 +370,31 @@ export function DashboardLayout({
   calendarSlot,
   mealLoggerSlot,
   comingSoonSlot,
+  chatSide = 'right',
+  defaultOpen = false,
 }: DashboardLayoutProps) {
   const router = useRouter();
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
+  const [closing, setClosing] = useState(false);
 
   async function handleSignOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
+  }
+
+  function handleOpen() {
+    setClosing(false);
+    setOpen(true);
+  }
+
+  function handleClose() {
+    setClosing(true);
+    setTimeout(() => {
+      setOpen(false);
+      setClosing(false);
+    }, 300);
   }
 
   return (
@@ -238,33 +420,42 @@ export function DashboardLayout({
 
         {/* ── Page body ───────────────────────────────────────────────── */}
         {comingSoonSlot ? (
-          /* Coming Soon pages: full-width, no grid */
           <FullWidthContent>{comingSoonSlot}</FullWidthContent>
         ) : (
-          /* Dashboard: 2-column grid */
-          <PageContent>
-            {/* Left Column — inline chat (desktop) */}
-            <LeftColumn>{mealLoggerSlot}</LeftColumn>
+          <BodyRow>
+            <CalendarArea>{calendarSlot}</CalendarArea>
 
-            {/* Right Column — calendar */}
-            <RightColumn>{calendarSlot}</RightColumn>
-          </PageContent>
+            {mealLoggerSlot && open && (
+              <>
+                {/* Backdrop: hidden at ≥900px via CSS */}
+                <Backdrop onClick={handleClose} />
+
+                <ChatPanel $closing={closing} $side={chatSide}>
+                  {/* Drag handle — mobile only via CSS */}
+                  <SheetHandle />
+
+                  <PanelHeader>
+                    <PanelTitle>
+                      <MessageSquare size={16} />
+                      Plenish Agent
+                    </PanelTitle>
+                    <PanelCloseButton onClick={handleClose} aria-label="Close chat">
+                      <X size={15} />
+                    </PanelCloseButton>
+                  </PanelHeader>
+
+                  <PanelBody>{mealLoggerSlot}</PanelBody>
+                </ChatPanel>
+              </>
+            )}
+          </BodyRow>
         )}
 
-        {/* ── Mobile FAB + Bottom Sheet ────────────────────────────────── */}
-        {mealLoggerSlot && (
-          <>
-            <FAB aria-label="Log a meal" onClick={() => setSheetOpen(true)}>
-              <PlusCircle size={26} />
-            </FAB>
-
-            <MealLoggerBottomSheet
-              isOpen={sheetOpen}
-              onClose={() => setSheetOpen(false)}
-            >
-              {mealLoggerSlot}
-            </MealLoggerBottomSheet>
-          </>
+        {/* ── FAB — shown when panel is closed ────────────────────────── */}
+        {mealLoggerSlot && !open && (
+          <FAB aria-label="Open chat" onClick={handleOpen}>
+            <MessageSquare size={24} />
+          </FAB>
         )}
       </DashboardContainer>
     </SessionLoggerProvider>
