@@ -5,7 +5,7 @@
   "workspaces": ["packages/*"],
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run build --workspace=packages/ai-session-logger && next build",
     "start": "next start",
     "lint": "eslint"
   },
