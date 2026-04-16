@@ -11,20 +11,30 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  *   - "google"    → gemini-2.5-flash (default)
  *   - "openai"    → gpt-4o-mini
  */
+const MODEL_IDS: Record<string, string> = {
+  openai: 'gpt-4o-mini',
+  google: 'gemini-2.5-flash',
+};
+
+export function getModelName(): string {
+  const provider = process.env.PLENISH_AI_PROVIDER ?? 'google';
+  return MODEL_IDS[provider] ?? MODEL_IDS.google;
+}
+
 export function getAIModel(): LanguageModel {
   const provider = process.env.PLENISH_AI_PROVIDER ?? 'google';
 
   switch (provider) {
     case 'openai': {
       const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      return openai('gpt-4o-mini');
+      return openai(MODEL_IDS.openai);
     }
     case 'google':
     default: {
       const google = createGoogleGenerativeAI({
         apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
       });
-      return google('gemini-2.5-flash');
+      return google(MODEL_IDS.google);
     }
   }
 }

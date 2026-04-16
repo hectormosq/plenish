@@ -1,13 +1,14 @@
-'use client';
+"use client";
 
-import type { ReactNode } from 'react';
-import { useState } from 'react';
-import Link from 'next/link';
-import styled, { keyframes } from 'styled-components';
-import { Utensils, LogOut, Settings, PlusCircle } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
-import { MealLoggerBottomSheet } from '@/components/specific/MealLoggerBottomSheet';
+import type { ReactNode } from "react";
+import { useState } from "react";
+import Link from "next/link";
+import styled, { keyframes } from "styled-components";
+import { Utensils, LogOut, Settings, PlusCircle } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { MealLoggerBottomSheet } from "@/components/specific/MealLoggerBottomSheet";
+import { SessionLoggerProvider } from "ai-session-logger/next";
 
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(-8px); }
@@ -170,7 +171,9 @@ const FAB = styled.button`
   justify-content: center;
   cursor: pointer;
   box-shadow: 0 4px 20px rgba(72, 199, 142, 0.4);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
   -webkit-tap-highlight-color: transparent;
 
   &:active {
@@ -187,6 +190,7 @@ const FAB = styled.button`
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface DashboardLayoutProps {
+  userId?: string;
   /** Left column: inline MealLogger (hidden on mobile, replaced by FAB+sheet) */
   mealLoggerSlot?: ReactNode;
   /** Right column: calendar grid */
@@ -196,6 +200,7 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({
+  userId = "anonymous",
   calendarSlot,
   mealLoggerSlot,
   comingSoonSlot,
@@ -206,63 +211,62 @@ export function DashboardLayout({
   async function handleSignOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push('/login');
+    router.push("/login");
     router.refresh();
   }
 
   return (
-    <DashboardContainer>
-      {/* ── Top Nav ─────────────────────────────────────────────────── */}
-      <NavBar>
-        <NavLogo>
-          <Utensils size={20} color="#48c78e" />
-          <LogoAccent>Plenish</LogoAccent>
-        </NavLogo>
-        <NavActions>
-          <SettingsLink href="/settings">
-            <Settings size={14} />
-            Settings
-          </SettingsLink>
-          <SignOutButton id="sign-out-btn" onClick={handleSignOut}>
-            <LogOut size={14} />
-            Sign out
-          </SignOutButton>
-        </NavActions>
-      </NavBar>
+    <SessionLoggerProvider userId={userId} app="plenish">
+      <DashboardContainer>
+        {/* ── Top Nav ─────────────────────────────────────────────────── */}
+        <NavBar>
+          <NavLogo>
+            <Utensils size={20} color="#48c78e" />
+            <LogoAccent>Plenish</LogoAccent>
+          </NavLogo>
+          <NavActions>
+            <SettingsLink href="/settings">
+              <Settings size={14} />
+              Settings
+            </SettingsLink>
+            <SignOutButton id="sign-out-btn" onClick={handleSignOut}>
+              <LogOut size={14} />
+              Sign out
+            </SignOutButton>
+          </NavActions>
+        </NavBar>
 
-      {/* ── Page body ───────────────────────────────────────────────── */}
-      {comingSoonSlot ? (
-        /* Coming Soon pages: full-width, no grid */
-        <FullWidthContent>{comingSoonSlot}</FullWidthContent>
-      ) : (
-        /* Dashboard: 2-column grid */
-        <PageContent>
-          {/* Left Column — inline chat (desktop) */}
-          <LeftColumn>{mealLoggerSlot}</LeftColumn>
+        {/* ── Page body ───────────────────────────────────────────────── */}
+        {comingSoonSlot ? (
+          /* Coming Soon pages: full-width, no grid */
+          <FullWidthContent>{comingSoonSlot}</FullWidthContent>
+        ) : (
+          /* Dashboard: 2-column grid */
+          <PageContent>
+            {/* Left Column — inline chat (desktop) */}
+            <LeftColumn>{mealLoggerSlot}</LeftColumn>
 
-          {/* Right Column — calendar */}
-          <RightColumn>{calendarSlot}</RightColumn>
-        </PageContent>
-      )}
+            {/* Right Column — calendar */}
+            <RightColumn>{calendarSlot}</RightColumn>
+          </PageContent>
+        )}
 
-      {/* ── Mobile FAB + Bottom Sheet ────────────────────────────────── */}
-      {mealLoggerSlot && (
-        <>
-          <FAB
-            aria-label="Log a meal"
-            onClick={() => setSheetOpen(true)}
-          >
-            <PlusCircle size={26} />
-          </FAB>
+        {/* ── Mobile FAB + Bottom Sheet ────────────────────────────────── */}
+        {mealLoggerSlot && (
+          <>
+            <FAB aria-label="Log a meal" onClick={() => setSheetOpen(true)}>
+              <PlusCircle size={26} />
+            </FAB>
 
-          <MealLoggerBottomSheet
-            isOpen={sheetOpen}
-            onClose={() => setSheetOpen(false)}
-          >
-            {mealLoggerSlot}
-          </MealLoggerBottomSheet>
-        </>
-      )}
-    </DashboardContainer>
+            <MealLoggerBottomSheet
+              isOpen={sheetOpen}
+              onClose={() => setSheetOpen(false)}
+            >
+              {mealLoggerSlot}
+            </MealLoggerBottomSheet>
+          </>
+        )}
+      </DashboardContainer>
+    </SessionLoggerProvider>
   );
 }

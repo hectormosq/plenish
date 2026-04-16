@@ -28,6 +28,7 @@ import {
   CalendarDays,
   Loader2,
 } from 'lucide-react';
+import { useSessionLogger } from 'ai-session-logger/next';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -595,6 +596,7 @@ export function MealWeekGrid({
   plannedMeals?: PlannedMeal[];
 }) {
   const router = useRouter();
+  const { session } = useSessionLogger();
   const isMobile = useIsMobile();
   const [isPending, startTransition] = useTransition();
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -690,6 +692,7 @@ export function MealWeekGrid({
   };
 
   const handleDelete = (id: string) => {
+    session.buttonClick('delete_meal', { id });
     startTransition(async () => {
       await deleteMeal(id);
       setTooltip(null);
@@ -698,6 +701,7 @@ export function MealWeekGrid({
   };
 
   const handleDismiss = (id: string) => {
+    session.buttonClick('dismiss_shared_meal', { id });
     startTransition(async () => {
       await dismissSharedMeal(id);
       setTooltip(null);
@@ -708,6 +712,7 @@ export function MealWeekGrid({
   // ─── Planned meal handlers ───────────────────────────────────────────────
 
   const handlePlanSlot = async (mealType: MealType, date: string) => {
+    session.buttonClick('plan_slot', { meal_type: mealType, date });
     const slotKey = `${date}-${mealType}`;
     setPlanningSlots((prev) => new Set(prev).add(slotKey));
     try {
@@ -723,6 +728,7 @@ export function MealWeekGrid({
   };
 
   const handleRegenerate = async (id: string, mealType: MealType, date: string) => {
+    session.buttonClick('regenerate_slot', { meal_type: mealType, date });
     const slotKey = `${date}-${mealType}`;
     setPlanningSlots((prev) => new Set(prev).add(slotKey));
     try {
@@ -740,12 +746,14 @@ export function MealWeekGrid({
   };
 
   const handleDismissPlanned = (id: string) => {
+    session.buttonClick('dismiss_planned', { id });
     // Optimistic removal
     setAllPlannedMeals((prev) => prev.filter((p) => p.id !== id));
     void dismissPlannedMeal(id);
   };
 
   const handleAcceptPlanned = (id: string, mealType: MealType, date: string, name: string) => {
+    session.buttonClick('accept_planned', { meal_type: mealType, date, name });
     // Fire-and-forget status update
     void acceptPlannedMeal(id);
     // Navigate to MealLogger with prefill
@@ -772,6 +780,7 @@ export function MealWeekGrid({
 
       if (emptySlots.length === 0) return;
 
+      session.buttonClick('plan_week', { slots: emptySlots.length });
       const newPlans = await planWeekSlots(emptySlots);
       setAllPlannedMeals((prev) => [...prev, ...newPlans]);
     } finally {

@@ -72,8 +72,7 @@ export async function getPlannedMeals(weekStart: string, weekEnd: string): Promi
   return data as PlannedMeal[];
 }
 
-export async function planSingleSlot(mealType: MealType, date: string): Promise<PlannedMeal> {
-  console.log('Planning single slot', { mealType, date });
+export async function planSingleSlot(mealType: MealType, date: string, sessionId?: string): Promise<PlannedMeal> {
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) throw new Error('Unauthorized');
@@ -95,6 +94,7 @@ export async function planSingleSlot(mealType: MealType, date: string): Promise<
     (recentData ?? []) as MealLog[],
     rejectedSummary,
     systemPrompt,
+    sessionId,
   );
 
   const { data, error } = await supabase
@@ -122,6 +122,7 @@ export async function planSingleSlot(mealType: MealType, date: string): Promise<
 
 export async function planWeekSlots(
   slots: { mealType: MealType; date: string }[],
+  sessionId?: string,
 ): Promise<PlannedMeal[]> {
   if (slots.length === 0) return [];
 
@@ -145,6 +146,7 @@ export async function planWeekSlots(
     (recentData ?? []) as MealLog[],
     rejectedSummary,
     systemPrompt,
+    sessionId,
   );
 
   const rows = slots.map((slot, i) => ({
