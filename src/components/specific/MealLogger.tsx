@@ -8,7 +8,7 @@ import type { UIMessage } from 'ai';
 import styled, { keyframes } from 'styled-components';
 import type { MealType } from '@/actions/meals';
 import type { HouseholdMemberSimple } from '@/actions/households';
-import { MessageSquare, Send, Loader2, X, Pencil } from 'lucide-react';
+import { Send, Loader2, X, Pencil } from 'lucide-react';
 import { MemberPickerPopover } from '@/components/specific/MemberPickerPopover';
 import { useSessionLogger } from 'ai-session-logger/next';
 
@@ -17,21 +17,9 @@ import { useSessionLogger } from 'ai-session-logger/next';
 const ChatContainer = styled.div`
   display: flex;
   flex-direction: column;
-  height: 600px;
-  background-color: #1a1a1a;
-  border: 1px solid #333;
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-`;
-
-const HeaderRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #333;
-  margin-bottom: 1rem;
+  height: 100%;
+  background-color: transparent;
+  padding: 0.75rem 0 0;
 `;
 
 const MessageList = styled.div`
@@ -463,14 +451,6 @@ export function MealLogger({
 
   return (
     <ChatContainer>
-      {/* Header */}
-      <HeaderRow>
-        <MessageSquare size={24} color="#a855f7" />
-        <span style={{ color: '#a855f7', fontWeight: 600, fontSize: '1.125rem' }}>
-          Plenish Agent
-        </span>
-      </HeaderRow>
-
       {/* Message List */}
       <MessageList>
         {/* Initial greeting */}
