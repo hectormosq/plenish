@@ -1,6 +1,6 @@
 import dotenv from 'dotenv'
 import { resolve } from 'path'
-import type { EventType, LogEntry, PromptSentPayload, LogLevel } from './events'
+import type { EventType, LogEntry, PromptSentPayload, AiResponsePayload, LogLevel } from './events'
 import { DirectFileTransport } from './transports/direct'
 
 dotenv.config({ path: resolve(process.cwd(), '.env.logger') })
@@ -54,6 +54,14 @@ export class ServerEventWriter {
     // Truncate large results so log lines stay readable
     const value = raw.length > 400 ? raw.slice(0, 400) + '…' : raw
     this.emit('TOOL_RESULT', { tool, result: value })
+  }
+
+  aiResponse(payload: AiResponsePayload): void {
+    const data: Record<string, unknown> = { text: payload.text }
+    if (payload.tokensUsed !== undefined) data.tokens_used = payload.tokensUsed
+    if (payload.inputTokens !== undefined) data.input_tokens = payload.inputTokens
+    if (payload.outputTokens !== undefined) data.output_tokens = payload.outputTokens
+    this.emit('AI_RESPONSE', data)
   }
 
   error(message: string, err?: Error): void {

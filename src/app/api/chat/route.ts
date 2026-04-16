@@ -53,12 +53,20 @@ export async function POST(req: Request) {
       plan_meals:         createPlanMealsTool(sessionId),
     },
     stopWhen: stepCountIs(7),
-    onStepFinish: ({ toolCalls, toolResults }) => {
+    onStepFinish: ({ text, toolCalls, toolResults, usage }) => {
       for (const tc of toolCalls) {
         writer?.toolCall(tc.toolName, tc.input as Record<string, unknown>);
       }
       for (const tr of toolResults) {
         writer?.toolResult(tr.toolName, tr.output);
+      }
+      if (text) {
+        writer?.aiResponse({
+          text,
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+          tokensUsed: usage.totalTokens,
+        });
       }
     },
   });

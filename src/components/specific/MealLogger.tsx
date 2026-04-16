@@ -311,27 +311,11 @@ export function MealLogger({
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const prevStatus = useRef(status);
 
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, error]);
 
-  // Log AI response when streaming completes
-  useEffect(() => {
-    if (
-      (prevStatus.current === 'streaming' || prevStatus.current === 'submitted') &&
-      status === 'ready'
-    ) {
-      const last = messages[messages.length - 1];
-      if (last?.role === 'assistant') {
-        const text = last.parts?.filter((p) => p.type === 'text').map((p) => p.text).join('') ?? '';
-        session.aiResponse({ text });
-      }
-    }
-    prevStatus.current = status;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
 
   // Clear prefill URL params after mount so they don't persist on refresh
   useEffect(() => {

@@ -35,6 +35,8 @@ export interface PromptSentPayload {
 export interface AiResponsePayload {
   text: string
   tokensUsed?: number
+  inputTokens?: number
+  outputTokens?: number
 }
 
 export interface LogEntry {
