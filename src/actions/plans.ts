@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import type { MealType, MealLog } from '@/actions/meals';
 import { generateSinglePlan, generateWeekPlan } from '@/lib/ai/getRecommendation';
-import { getSystemPrompt } from '@/lib/ai/provider';
+import { getFullSystemPrompt } from '@/lib/ai/provider';
 
 export interface PlannedMeal {
   id: string;
@@ -85,7 +85,7 @@ export async function planSingleSlot(mealType: MealType, date: string, sessionId
       .order('eaten_at', { ascending: false })
       .limit(10),
     getTopRejectedMeals(user.id),
-    getSystemPrompt(0, user.id, supabase),
+    getFullSystemPrompt(0, user.id, supabase),
   ]);
 
   const recommendation = await generateSinglePlan(
@@ -138,7 +138,7 @@ export async function planWeekSlots(
       .order('eaten_at', { ascending: false })
       .limit(10),
     getTopRejectedMeals(user.id),
-    getSystemPrompt(0, user.id, supabase),
+    getFullSystemPrompt(0, user.id, supabase),
   ]);
 
   const recommendations = await generateWeekPlan(

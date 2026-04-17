@@ -108,7 +108,81 @@ const DEFAULT_PROFILE: DietProfile = {
 // getSystemPrompt — async, loads diet profile from DB
 // ---------------------------------------------------------------------------
 
-export async function getSystemPrompt(
+// ---------------------------------------------------------------------------
+// getBaseSystemPrompt — lean prompt for logging intent (~200 tokens)
+// Skips the diet profile query entirely. Runs one lightweight household
+// membership query to determine sharing scope — returns null for solo users.
+// ---------------------------------------------------------------------------
+
+export async function getBaseSystemPrompt(
+  tzOffsetMinutes: number,
+  userId: string,
+  supabase: SupabaseClient,
+): Promise<string> {
+  const serverNow = new Date();
+  const localMs   = serverNow.getTime() - tzOffsetMinutes * 60_000;
+  const localNow  = new Date(localMs);
+  const dateStr   = localNow.toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
+  });
+  const timeStr = localNow.toLocaleTimeString('en-US', {
+    hour: '2-digit', minute: '2-digit', timeZone: 'UTC',
+  });
+  const dateLine = `${dateStr} at ${timeStr}`;
+
+  // One lightweight query to get household membership and sharing scope.
+  // Returns null for users with no household — no flag needed.
+  const { data: membershipRow } = await supabase
+    .from('household_members')
+    .select('household_id, role, households(name, id)')
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  let householdSection = '';
+
+  if (membershipRow) {
+    const household = membershipRow.households as unknown as { name: string; id: string } | null;
+    if (household) {
+      const { data: members } = await supabase
+        .from('household_members')
+        .select('user_id')
+        .eq('household_id', household.id)
+        .eq('status', 'active')
+        .neq('user_id', userId);
+
+      const coMemberIds = (members ?? []).map((m) => m.user_id as string);
+
+      householdSection = `
+# Household
+
+ID: ${household.id} | Role: ${membershipRow.role} | Co-members: ${coMemberIds.length > 0 ? coMemberIds.join(', ') : 'none'}
+"nosotros"/"comimos"/"en casa" → is_shared=true, co_eater_ids=[${coMemberIds.join(', ')}]
+"solo yo"/"just me" → is_shared=false`;
+    }
+  }
+
+  return `Today: ${dateLine}
+
+You are an AI meal tracker. Be concise and practical.
+Respond in the user's language.
+${householdSection}
+# Tools
+
+## log_meal
+- Strip UI prefixes: [date: YYYY-MM-DD] → eaten_at=YYYY-MM-DDT12:00:00.000Z, [meal_type] → meal_type. Exclude prefixes from log_text. No date → now.
+- Infer: food_groups, protein_type, servings, has_occasional_food, portion_confidence, inferred_ingredients. Use general knowledge for portion sizes.
+- After logging: reply with a single short confirmation only (e.g. "✓ Desayuno registrado."). No summaries, no gap analysis, no recommendations unless the user explicitly asks.
+- If a recipe_suggestion is returned: show the recipe name and ask whether to link it.
+- If no recipe_suggestion and ≥2 ingredients inferred: show inferred_ingredients and offer to save as a recipe.`;
+}
+
+// ---------------------------------------------------------------------------
+// getFullSystemPrompt — full prompt for recommendation / management / ambiguous
+// Loads diet profile and household context. Renamed from getSystemPrompt.
+// ---------------------------------------------------------------------------
+
+export async function getFullSystemPrompt(
   tzOffsetMinutes: number,
   userId: string,
   supabase: SupabaseClient,
@@ -230,7 +304,7 @@ These are guidelines for **recommendations only** — never block, question, or 
 
 # User Preferences
 
-Respond in the user's language (Spanish or English). Spanish/Latin cuisine preferred.
+Respond in the user's language.
 
 # Portion Defaults (1 serving when qty omitted; for unlisted foods, infer closest category)
 
