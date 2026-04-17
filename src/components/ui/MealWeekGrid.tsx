@@ -605,6 +605,10 @@ export function MealWeekGrid({
   const [allMeals, setAllMeals] = useState<CalendarMeal[]>(initialMeals);
   const [loadedDaysBack, setLoadedDaysBack] = useState(initialDaysBack);
   const [allPlannedMeals, setAllPlannedMeals] = useState<PlannedMeal[]>(initialPlannedMeals);
+
+  // Sync local state when server re-fetches (e.g. after router.refresh())
+  useEffect(() => { setAllMeals(initialMeals); }, [initialMeals]);
+  useEffect(() => { setAllPlannedMeals(initialPlannedMeals); }, [initialPlannedMeals]);
   const [planningSlots, setPlanningSlots] = useState<Set<string>>(new Set());
   const [isPlanningWeek, setIsPlanningWeek] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -695,6 +699,7 @@ export function MealWeekGrid({
     session.buttonClick('delete_meal', { id });
     startTransition(async () => {
       await deleteMeal(id);
+      setAllMeals((prev) => prev.filter((m) => m.id !== id));
       setTooltip(null);
       router.refresh();
     });
@@ -704,6 +709,7 @@ export function MealWeekGrid({
     session.buttonClick('dismiss_shared_meal', { id });
     startTransition(async () => {
       await dismissSharedMeal(id);
+      setAllMeals((prev) => prev.filter((m) => m.id !== id));
       setTooltip(null);
       router.refresh();
     });

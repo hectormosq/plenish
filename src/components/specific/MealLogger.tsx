@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
+import { DefaultChatTransport, isToolUIPart } from 'ai';
 import type { UIMessage } from 'ai';
 import styled, { keyframes } from 'styled-components';
 import type { MealType } from '@/actions/meals';
@@ -286,6 +286,7 @@ export function MealLogger({
   initialDate,
 }: MealLoggerProps) {
   const router = useRouter();
+  const prevStatusRef = useRef<string>('');
   const { session } = useSessionLogger();
   const chatTransport = useMemo(
     () => new DefaultChatTransport({
@@ -313,6 +314,18 @@ export function MealLogger({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Refresh the calendar after the AI completes a tool-calling response
+  useEffect(() => {
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = status;
+    if ((prev === 'streaming' || prev === 'submitted') && status === 'ready') {
+      const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
+      if (lastAssistant?.parts.some(isToolUIPart)) {
+        router.refresh();
+      }
+    }
+  }, [status, messages, router]);
 
   const [localInput, setLocalInput] = useState(initialText ?? '');
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(initialMealType ?? null);
