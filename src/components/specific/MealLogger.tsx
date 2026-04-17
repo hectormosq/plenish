@@ -146,7 +146,7 @@ const InputForm = styled.form`
   display: flex;
   gap: 0.5rem;
   margin-top: 0.75rem;
-  align-items: center;
+  align-items: flex-end;
 `;
 
 const ChatTextarea = styled.textarea`
@@ -411,6 +411,9 @@ export function MealLogger({
     setLocalInput('');
     setSelectedMealType(null);
     setSelectedDate(null);
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+    }
   };
 
   const handleChipClick = (type: MealType) => {
@@ -603,7 +606,6 @@ export function MealLogger({
       <InputForm onSubmit={handleFormSubmit}>
         <ChatTextarea
           ref={inputRef}
-          rows={1}
           value={localInput}
           onChange={(e) => {
             e.target.style.height = 'auto';
