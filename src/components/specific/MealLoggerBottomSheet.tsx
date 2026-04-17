@@ -133,16 +133,6 @@ export function MealLoggerBottomSheet({
   onClose,
   children,
 }: MealLoggerBottomSheetProps) {
-  // Listen for meal submission and auto-close the sheet
-  useEffect(() => {
-    const handleMealSubmitted = () => {
-      // Small delay so the user sees the message sent before the sheet closes
-      setTimeout(onClose, 600);
-    };
-    window.addEventListener('plenish:meal-submitted', handleMealSubmitted);
-    return () => window.removeEventListener('plenish:meal-submitted', handleMealSubmitted);
-  }, [onClose]);
-
   // Lock body scroll while sheet is open
   useEffect(() => {
     if (isOpen) {
