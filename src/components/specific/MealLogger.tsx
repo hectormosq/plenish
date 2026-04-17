@@ -149,16 +149,26 @@ const InputForm = styled.form`
   align-items: center;
 `;
 
-const ChatInput = styled.input`
+const ChatTextarea = styled.textarea`
   flex: 1;
   background-color: #222;
   border: 1px solid #444;
   color: #fff;
-  padding: 1rem;
-  border-radius: 9999px;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
   outline: none;
   font-family: inherit;
   font-size: 1rem;
+  resize: none;
+  overflow-y: auto;
+  min-height: 5rem;
+  max-height: 12rem;
+  line-height: 1.5;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 
   &:focus {
     border-color: #3b82f6;
@@ -299,7 +309,7 @@ export function MealLogger({
   const isLoading = status === 'streaming' || status === 'submitted';
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -591,10 +601,15 @@ export function MealLogger({
 
       {/* Input Form */}
       <InputForm onSubmit={handleFormSubmit}>
-        <ChatInput
+        <ChatTextarea
           ref={inputRef}
+          rows={1}
           value={localInput}
-          onChange={(e) => setLocalInput(e.target.value)}
+          onChange={(e) => {
+            e.target.style.height = 'auto';
+            e.target.style.height = `${e.target.scrollHeight}px`;
+            setLocalInput(e.target.value);
+          }}
           placeholder={
             selectedMealType
               ? `Describe your ${selectedMealType}...`
