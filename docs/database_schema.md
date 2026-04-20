@@ -81,6 +81,26 @@ Automatically managed by Supabase Auth (`auth.users`), but we track public profi
 
 > **Dismissal**: Co-eaters can dismiss a shared meal (sets `dismissed=true`) without deleting it. The meal still appears in the household shared log and for the original logger.
 
+### `public.planned_meals`
+**Purpose:** Represents an AI-recommended meal slot for a specific date and meal type. Created by the meal planner feature and displayed on the weekly calendar.
+- `id` (uuid) PK
+- `user_id` (uuid) references `public.users`
+- `meal_type` (text) — `'breakfast'`, `'lunch'`, `'dinner'`, `'snack'`
+- `planned_date` (date) — the date this meal is planned for
+- `name` (text) — AI-generated meal name (e.g., "Pollo a la plancha con ensalada")
+- `description` (text, nullable) — short meal description
+- `reason` (text, nullable) — AI rationale for why this meal was recommended
+- `ingredients` (text[], nullable) — list of ingredient strings
+- `instructions` (text, nullable) — step-by-step cooking instructions in free text
+- `prep_time_minutes` (int, nullable) — estimated preparation time
+- `estimated_calories` (int, nullable) — estimated calorie count
+- `status` (text) — `'planned'`, `'accepted'`, `'overridden'`, `'dismissed'`
+- `accepted_meal_id` (uuid, nullable) — if accepted, references `public.meal_logs`
+- `overridden_meal_id` (uuid, nullable) — if overridden, references `public.meal_logs`
+- `created_at` (timestamptz)
+
+> **AI-generated**: Rows are created by the `planSingleSlot` and `planWeekSlots` server actions in `src/actions/plans.ts`, which call the AI recommendation engine and store the full structured output including ingredients and instructions.
+
 ### `public.weekly_plan`
 **Purpose:** Represents a specific 7-day schedule for a user.
 - `id` (uuid) PK

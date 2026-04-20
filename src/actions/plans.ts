@@ -15,6 +15,7 @@ export interface PlannedMeal {
   description: string | null;
   reason: string | null;
   ingredients: string[] | null;
+  instructions: string | null;
   prep_time_minutes: number | null;
   estimated_calories: number | null;
   status: 'planned' | 'accepted' | 'dismissed' | 'overridden' | 'expired';
@@ -72,7 +73,7 @@ export async function getPlannedMeals(weekStart: string, weekEnd: string): Promi
   return data as PlannedMeal[];
 }
 
-export async function planSingleSlot(mealType: MealType, date: string, sessionId?: string): Promise<PlannedMeal> {
+export async function planSingleSlot(mealType: MealType, date: string, sessionId?: string, ingredientHint?: string): Promise<PlannedMeal> {
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) throw new Error('Unauthorized');
@@ -95,6 +96,7 @@ export async function planSingleSlot(mealType: MealType, date: string, sessionId
     rejectedSummary,
     systemPrompt,
     sessionId,
+    ingredientHint,
   );
 
   const { data, error } = await supabase
@@ -107,6 +109,7 @@ export async function planSingleSlot(mealType: MealType, date: string, sessionId
       description: recommendation.description,
       reason: recommendation.reason,
       ingredients: recommendation.ingredients,
+      instructions: recommendation.instructions ?? null,
       prep_time_minutes: recommendation.prepTimeMinutes,
       estimated_calories: recommendation.estimatedCalories,
       status: 'planned',
@@ -157,6 +160,7 @@ export async function planWeekSlots(
     description: recommendations[i].description ?? null,
     reason: recommendations[i].reason,
     ingredients: recommendations[i].ingredients ?? null,
+    instructions: recommendations[i].instructions ?? null,
     prep_time_minutes: recommendations[i].prepTimeMinutes,
     estimated_calories: recommendations[i].estimatedCalories,
     status: 'planned' as const,
@@ -177,6 +181,7 @@ export async function regenerateSlot(
   existingId: string,
   mealType: MealType,
   date: string,
+  ingredientHint?: string,
 ): Promise<PlannedMeal> {
   console.log('Regenerating slot', { existingId, mealType, date });
   const supabase = await createClient();
@@ -189,7 +194,7 @@ export async function regenerateSlot(
     .eq('id', existingId)
     .eq('user_id', user.id);
 
-  return planSingleSlot(mealType, date);
+  return planSingleSlot(mealType, date, undefined, ingredientHint);
 }
 
 export async function dismissPlannedMeal(id: string): Promise<void> {

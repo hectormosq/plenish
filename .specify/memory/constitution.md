@@ -24,7 +24,7 @@ The codebase uses one styling system (styled-components), one AI provider abstra
 - **No hardcoded user IDs or content** — all data must be user-scoped via auth
 - **No mocked data in production paths** — stubs (`CurrentRecommendation`, `NutritionGoals`) must be replaced before a feature is considered done
 - **TypeScript strict mode** — zero type errors required; run `npm run build` before finalizing any change
-- **Bilingual by default** — UI copy must support English and Spanish; Spanish is the primary audience
+- **Multilanguage by default** — UI copy must use a translated key and translation files for english and spanish
 
 ## Development Workflow
 
