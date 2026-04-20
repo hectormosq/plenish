@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File \".specify/scripts/powershell/check-prerequisites.ps1\" -Json -RequireTasks -IncludeTasks)",
-      "Bash(node -e \"const z = require\\('zod'\\); const s = z.object\\({period: z.enum\\(['today','yesterday','week']\\).optional\\(\\).default\\('today'\\)}\\); console.log\\(JSON.stringify\\(s.parse\\({}\\)\\)\\)\")"
+      "Bash(node -e \"const z = require\\('zod'\\); const s = z.object\\({period: z.enum\\(['today','yesterday','week']\\).optional\\(\\).default\\('today'\\)}\\); console.log\\(JSON.stringify\\(s.parse\\({}\\)\\)\\)\")",
+      "Bash(node:*)",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "Bash(powershell.exe -File .specify/scripts/powershell/update-agent-context.ps1 -AgentType claude)"
     ]
   }
 }

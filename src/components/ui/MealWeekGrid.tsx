@@ -564,6 +564,116 @@ const TipButton = styled.button<{ $variant: 'delete' | 'dismiss' }>`
   }
 `;
 
+const ExpandToggle = styled.button`
+  background: transparent;
+  border: none;
+  color: #4b5563;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  font-size: 0.6rem;
+  line-height: 1;
+  transition: color 0.12s;
+  flex-shrink: 0;
+
+  &:hover { color: #9ca3af; }
+`;
+
+const ExpandedContent = styled.div`
+  margin-top: 0.3rem;
+  padding-top: 0.3rem;
+  border-top: 1px solid rgba(255,255,255,0.06);
+`;
+
+const IngredientList = styled.ul`
+  margin: 0 0 0.3rem;
+  padding-left: 0.9rem;
+  list-style: disc;
+`;
+
+const IngredientItem = styled.li`
+  font-size: 0.6rem;
+  color: #6b7280;
+  line-height: 1.4;
+`;
+
+const InstructionsText = styled.p`
+  margin: 0;
+  font-size: 0.6rem;
+  color: #6b7280;
+  line-height: 1.45;
+  font-style: italic;
+`;
+
+const NoDetailsText = styled.p`
+  margin: 0;
+  font-size: 0.6rem;
+  color: #374151;
+  font-style: italic;
+`;
+
+const HintOverlay = styled.div`
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(251, 191, 36, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+`;
+
+const HintInput = styled.input`
+  background: rgba(255,255,255,0.04);
+  border: 1px solid #2a2a2a;
+  color: #d1d5db;
+  border-radius: 4px;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.65rem;
+  font-family: inherit;
+  outline: none;
+  width: 100%;
+
+  &::placeholder { color: #4b5563; }
+  &:focus { border-color: rgba(251, 191, 36, 0.35); }
+`;
+
+const HintButtons = styled.div`
+  display: flex;
+  gap: 0.2rem;
+`;
+
+const HintConfirmBtn = styled.button`
+  flex: 1;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
+  border-radius: 4px;
+  padding: 0.2rem 0;
+  font-size: 0.6rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.12s;
+
+  &:hover:not(:disabled) { background: rgba(251, 191, 36, 0.18); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+`;
+
+const HintSkipBtn = styled.button`
+  flex: 1;
+  background: rgba(107, 114, 128, 0.08);
+  border: 1px solid rgba(107, 114, 128, 0.2);
+  color: #6b7280;
+  border-radius: 4px;
+  padding: 0.2rem 0;
+  font-size: 0.6rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.12s;
+
+  &:hover:not(:disabled) { background: rgba(107, 114, 128, 0.18); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+`;
+
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 
 function useIsMobile(): boolean {
@@ -611,6 +721,9 @@ export function MealWeekGrid({
   useEffect(() => { setAllPlannedMeals(initialPlannedMeals); }, [initialPlannedMeals]);
   const [planningSlots, setPlanningSlots] = useState<Set<string>>(new Set());
   const [isPlanningWeek, setIsPlanningWeek] = useState(false);
+  const [expandedSlots, setExpandedSlots] = useState<Set<string>>(new Set());
+  const [regenHintSlot, setRegenHintSlot] = useState<{ id: string; mealType: MealType; date: string } | null>(null);
+  const [regenHint, setRegenHint] = useState('');
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   // On mobile, default to showing today in view (shift to today's index in week)
@@ -715,6 +828,14 @@ export function MealWeekGrid({
     });
   };
 
+  const handleToggleExpand = (id: string) => {
+    setExpandedSlots((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
   // ─── Planned meal handlers ───────────────────────────────────────────────
 
   const handlePlanSlot = async (mealType: MealType, date: string) => {
@@ -733,14 +854,22 @@ export function MealWeekGrid({
     }
   };
 
-  const handleRegenerate = async (id: string, mealType: MealType, date: string) => {
+  const handleRegenerate = (id: string, mealType: MealType, date: string) => {
     session.buttonClick('regenerate_slot', { meal_type: mealType, date });
+    setRegenHintSlot({ id, mealType, date });
+    setRegenHint('');
+  };
+
+  const handleRegenConfirm = async (hint?: string) => {
+    if (!regenHintSlot) return;
+    const { id, mealType, date } = regenHintSlot;
+    setRegenHintSlot(null);
+    setRegenHint('');
     const slotKey = `${date}-${mealType}`;
     setPlanningSlots((prev) => new Set(prev).add(slotKey));
     try {
-      // Optimistically remove old
       setAllPlannedMeals((prev) => prev.filter((p) => p.id !== id));
-      const newPlan = await regenerateSlot(id, mealType, date);
+      const newPlan = await regenerateSlot(id, mealType, date, hint);
       setAllPlannedMeals((prev) => [...prev, newPlan]);
     } finally {
       setPlanningSlots((prev) => {
@@ -750,6 +879,8 @@ export function MealWeekGrid({
       });
     }
   };
+
+  const handleRegenSkip = () => handleRegenConfirm(undefined);
 
   const handleDismissPlanned = (id: string) => {
     session.buttonClick('dismiss_planned', { id });
@@ -922,6 +1053,9 @@ export function MealWeekGrid({
 
               // ── Planned meal ─────────────────────────────────────────────
               if (planned) {
+                const isExpanded = expandedSlots.has(planned.id);
+                const isAwaitingHint = regenHintSlot?.id === planned.id;
+                const hasDetails = (planned.ingredients && planned.ingredients.length > 0) || planned.instructions;
                 return (
                   <Cell
                     key={dayKey}
@@ -932,32 +1066,81 @@ export function MealWeekGrid({
                     $planColor={MEAL_COLOR[mealType]}
                   >
                     <CellBody>
-                      <PlannedName title={planned.name}>{planned.name}</PlannedName>
-                      <PlannedActions>
-                        <PlanActionBtn
-                          $variant="accept"
-                          title="Accept — pre-fill meal logger"
-                          onClick={() =>
-                            handleAcceptPlanned(planned.id, mealType, dayKey, planned.name)
-                          }
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.2rem' }}>
+                        <PlannedName title={planned.name} style={{ flex: 1 }}>{planned.name}</PlannedName>
+                        <ExpandToggle
+                          onClick={() => handleToggleExpand(planned.id)}
+                          title={isExpanded ? 'Collapse' : 'Show ingredients & instructions'}
                         >
-                          <Check size={9} />
-                        </PlanActionBtn>
-                        <PlanActionBtn
-                          $variant="regen"
-                          title="Regenerate suggestion"
-                          onClick={() => handleRegenerate(planned.id, mealType, dayKey)}
-                        >
-                          <RotateCcw size={9} />
-                        </PlanActionBtn>
-                        <PlanActionBtn
-                          $variant="dismiss"
-                          title="Dismiss"
-                          onClick={() => handleDismissPlanned(planned.id)}
-                        >
-                          <XIcon size={9} />
-                        </PlanActionBtn>
-                      </PlannedActions>
+                          {isExpanded ? '▲' : '▼'}
+                        </ExpandToggle>
+                      </div>
+                      {isExpanded && (
+                        <ExpandedContent>
+                          {hasDetails ? (
+                            <>
+                              {planned.ingredients && planned.ingredients.length > 0 && (
+                                <IngredientList>
+                                  {planned.ingredients.map((ing, idx) => (
+                                    <IngredientItem key={idx}>{ing}</IngredientItem>
+                                  ))}
+                                </IngredientList>
+                              )}
+                              {planned.instructions && (
+                                <InstructionsText>{planned.instructions}</InstructionsText>
+                              )}
+                            </>
+                          ) : (
+                            <NoDetailsText>No details available</NoDetailsText>
+                          )}
+                        </ExpandedContent>
+                      )}
+                      {isAwaitingHint ? (
+                        <HintOverlay>
+                          <HintInput
+                            placeholder="Ingredient hint (optional)"
+                            value={regenHint}
+                            onChange={(e) => setRegenHint(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleRegenConfirm(regenHint || undefined);
+                              if (e.key === 'Escape') { setRegenHintSlot(null); setRegenHint(''); }
+                            }}
+                            autoFocus
+                          />
+                          <HintButtons>
+                            <HintConfirmBtn onClick={() => handleRegenConfirm(regenHint || undefined)}>
+                              Regenerate
+                            </HintConfirmBtn>
+                            <HintSkipBtn onClick={handleRegenSkip}>Skip</HintSkipBtn>
+                          </HintButtons>
+                        </HintOverlay>
+                      ) : (
+                        <PlannedActions>
+                          <PlanActionBtn
+                            $variant="accept"
+                            title="Accept — pre-fill meal logger"
+                            onClick={() =>
+                              handleAcceptPlanned(planned.id, mealType, dayKey, planned.name)
+                            }
+                          >
+                            <Check size={9} />
+                          </PlanActionBtn>
+                          <PlanActionBtn
+                            $variant="regen"
+                            title="Regenerate suggestion"
+                            onClick={() => handleRegenerate(planned.id, mealType, dayKey)}
+                          >
+                            <RotateCcw size={9} />
+                          </PlanActionBtn>
+                          <PlanActionBtn
+                            $variant="dismiss"
+                            title="Dismiss"
+                            onClick={() => handleDismissPlanned(planned.id)}
+                          >
+                            <XIcon size={9} />
+                          </PlanActionBtn>
+                        </PlannedActions>
+                      )}
                     </CellBody>
                   </Cell>
                 );

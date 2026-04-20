@@ -18,6 +18,7 @@ export const RecommendationSchema = z.object({
     .string()
     .describe("Why this meal is being recommended based on the user history"),
   ingredients: z.array(z.string()).max(8).describe("Main ingredients list"),
+  instructions: z.string().describe("Step-by-step cooking instructions in 2-4 sentences"),
 });
 
 export type Recommendation = z.infer<typeof RecommendationSchema>;
@@ -34,10 +35,12 @@ export async function generateSinglePlan(
   rejectedSummary: string,
   systemPrompt: string,
   sessionId?: string,
+  ingredientHint?: string,
 ): Promise<Recommendation> {
   const model = getAIModel();
   const rejectedPart = rejectedSummary ? `\n\n${rejectedSummary}` : "";
-  const prompt = `Plan a ${mealType} for ${date}.\n\n    Recent meal history:\n    ${buildRecentSummary(recentMeals)}${rejectedPart}`;
+  const hintPart = ingredientHint ? `\n\nPreferred ingredients (soft constraint): ${ingredientHint}` : "";
+  const prompt = `Plan a ${mealType} for ${date}.\n\n    Recent meal history:\n    ${buildRecentSummary(recentMeals)}${rejectedPart}${hintPart}`;
 
   if (sessionId) {
     createServerWriter({ sessionId, userId: 'system', app: 'plenish' }).promptSent({
