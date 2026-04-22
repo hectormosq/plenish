@@ -288,6 +288,22 @@ interface MealLoggerProps {
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
 
+const MEAL_LABELS_ES: Record<string, string> = {
+  breakfast: 'desayuno',
+  snack: 'merienda',
+  lunch: 'almuerzo',
+  dinner: 'cena',
+};
+
+function buildIntroMessage(initialMealType?: string, initialDate?: string): string {
+  if (initialMealType) {
+    const mealLabel = MEAL_LABELS_ES[initialMealType] ?? initialMealType;
+    const datePart = initialDate ? ` del ${initialDate}` : '';
+    return `¡Hola! Vamos a registrar tu ${mealLabel}${datePart}. ¿Qué comiste?`;
+  }
+  return '¡Hola! Soy tu asistente de Plenish. ¿Qué comiste hoy o necesitas ayuda planificando tu semana?';
+}
+
 export function MealLogger({
   householdMembers = [],
   defaultShareState = 'all',
@@ -481,8 +497,7 @@ export function MealLogger({
       <MessageList>
         {/* Initial greeting */}
         <MessageBubble $role="assistant">
-          ¡Hola! Soy tu asistente de Plenish. ¿Qué comiste hoy o necesitas ayuda
-          planificando tu semana?
+          {buildIntroMessage(initialMealType, initialDate)}
         </MessageBubble>
 
         {/* Chat messages */}

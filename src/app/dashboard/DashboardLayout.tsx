@@ -1,12 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import Link from "next/link";
 import styled, { keyframes, css } from "styled-components";
 import { Utensils, LogOut, Settings, MessageSquare, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SessionLoggerProvider } from "ai-session-logger/next";
 
 const fadeIn = keyframes`
@@ -352,6 +352,25 @@ const FullWidthContent = styled.main`
   animation: ${fadeIn} 0.4s ease 0.1s both;
 `;
 
+// ─── Prefill detector ────────────────────────────────────────────────────────
+// Isolated into its own component so useSearchParams() can be wrapped in Suspense.
+
+
+interface PrefillInfo {
+  type: string;
+  date: string;
+}
+
+function PrefillDetector({ onPrefill }: { onPrefill: (info: PrefillInfo) => void }) {
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const type = searchParams.get('prefillType');
+    const date = searchParams.get('prefillDate');
+    if (type) onPrefill({ type, date: date ?? '' });
+  }, [searchParams, onPrefill]);
+  return null;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface DashboardLayoutProps {
@@ -376,6 +395,9 @@ export function DashboardLayout({
   const router = useRouter();
   const [open, setOpen] = useState(defaultOpen);
   const [closing, setClosing] = useState(false);
+  const [prefillInfo, setPrefillInfo] = useState<PrefillInfo | null>(null);
+  // Prevents router.replace (called in handleClose) from re-triggering PrefillDetector
+  const isClosingRef = useRef(false);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -390,15 +412,30 @@ export function DashboardLayout({
   }
 
   function handleClose() {
+    isClosingRef.current = true;
+    setPrefillInfo(null);
+    router.replace('/dashboard', { scroll: false });
     setClosing(true);
     setTimeout(() => {
       setOpen(false);
       setClosing(false);
+      isClosingRef.current = false;
     }, 300);
   }
 
+  const handleOpenFromPrefill = useCallback((info: PrefillInfo) => {
+    if (isClosingRef.current) return;
+    setPrefillInfo(info);
+    setClosing(false);
+    setOpen(true);
+  }, []);
+
   return (
     <SessionLoggerProvider userId={userId} app="plenish">
+      <Suspense>
+        <PrefillDetector onPrefill={handleOpenFromPrefill} />
+      </Suspense>
+
       <DashboardContainer>
         {/* ── Top Nav ─────────────────────────────────────────────────── */}
         <NavBar>

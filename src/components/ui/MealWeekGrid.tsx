@@ -29,6 +29,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useSessionLogger } from 'ai-session-logger/next';
+import { CellActionPicker } from '@/components/specific/CellActionPicker';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -316,6 +317,14 @@ const EmptyFutureCell = styled(Cell)`
 
   &:hover .plus-trigger {
     opacity: 1;
+  }
+`;
+
+const EmptyPastCell = styled(Cell)`
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
   }
 `;
 
@@ -724,6 +733,7 @@ export function MealWeekGrid({
   const [expandedSlots, setExpandedSlots] = useState<Set<string>>(new Set());
   const [regenHintSlot, setRegenHintSlot] = useState<{ id: string; mealType: MealType; date: string } | null>(null);
   const [regenHint, setRegenHint] = useState('');
+  const [activePicker, setActivePicker] = useState<{ date: string; mealType: MealType; cellRect: DOMRect } | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   // On mobile, default to showing today in view (shift to today's index in week)
@@ -887,6 +897,18 @@ export function MealWeekGrid({
     // Optimistic removal
     setAllPlannedMeals((prev) => prev.filter((p) => p.id !== id));
     void dismissPlannedMeal(id);
+  };
+
+  const handlePickerRecommend = (mealType: MealType, date: string) => {
+    setActivePicker(null);
+    void handlePlanSlot(mealType, date);
+  };
+
+  const handlePickerLogMeal = (mealType: MealType, date: string) => {
+    setActivePicker(null);
+    router.push(
+      `/dashboard?prefillType=${encodeURIComponent(mealType)}&prefillDate=${encodeURIComponent(date)}`,
+    );
   };
 
   const handleAcceptPlanned = (id: string, mealType: MealType, date: string, name: string) => {
@@ -1154,7 +1176,13 @@ export function MealWeekGrid({
                     $today={isToday}
                     $filled={false}
                     $bg=""
-                    onClick={() => handlePlanSlot(mealType, dayKey)}
+                    onClick={(e) =>
+                      setActivePicker({
+                        date: dayKey,
+                        mealType,
+                        cellRect: (e.currentTarget as HTMLElement).getBoundingClientRect(),
+                      })
+                    }
                     title="Plan this meal"
                   >
                     <PlusTrigger className="plus-trigger">
@@ -1166,14 +1194,41 @@ export function MealWeekGrid({
 
               // ── Empty past cell ──────────────────────────────────────────
               return (
-                <Cell key={dayKey} $today={isToday} $filled={false} $bg="">
+                <EmptyPastCell
+                  key={dayKey}
+                  $today={isToday}
+                  $filled={false}
+                  $bg=""
+                  onClick={(e) =>
+                    setActivePicker({
+                      date: dayKey,
+                      mealType,
+                      cellRect: (e.currentTarget as HTMLElement).getBoundingClientRect(),
+                    })
+                  }
+                  title="Log a meal"
+                >
                   <Ghost>—</Ghost>
-                </Cell>
+                </EmptyPastCell>
               );
             })}
           </React.Fragment>
         ))}
       </Grid>
+
+      {/* Action picker — shown when an empty cell is tapped */}
+      {activePicker && (
+        <CellActionPicker
+          date={activePicker.date}
+          mealType={activePicker.mealType}
+          isFuture={activePicker.date >= todayKey}
+          cellRect={activePicker.cellRect}
+          lang="es"
+          onGetRecommendation={handlePickerRecommend}
+          onLogMeal={handlePickerLogMeal}
+          onClose={() => setActivePicker(null)}
+        />
+      )}
 
       {/* Tooltip — click-triggered, fixed position */}
       {tooltip && (
