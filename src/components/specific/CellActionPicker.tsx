@@ -76,7 +76,7 @@ const LABELS = {
 // ─── Position helpers ─────────────────────────────────────────────────────────
 
 const CARD_WIDTH = 220;
-const CARD_HEIGHT = 120; // estimated for two buttons
+const CARD_HEIGHT = 140; // estimated for two buttons, with wrapping margin
 const GAP = 8;
 const EDGE_MARGIN = 8;
 

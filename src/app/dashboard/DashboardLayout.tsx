@@ -395,7 +395,6 @@ export function DashboardLayout({
   const router = useRouter();
   const [open, setOpen] = useState(defaultOpen);
   const [closing, setClosing] = useState(false);
-  const [prefillInfo, setPrefillInfo] = useState<PrefillInfo | null>(null);
   // Prevents router.replace (called in handleClose) from re-triggering PrefillDetector
   const isClosingRef = useRef(false);
 
@@ -413,7 +412,6 @@ export function DashboardLayout({
 
   function handleClose() {
     isClosingRef.current = true;
-    setPrefillInfo(null);
     router.replace('/dashboard', { scroll: false });
     setClosing(true);
     setTimeout(() => {
@@ -423,9 +421,8 @@ export function DashboardLayout({
     }, 300);
   }
 
-  const handleOpenFromPrefill = useCallback((info: PrefillInfo) => {
+  const handleOpenFromPrefill = useCallback((_info: PrefillInfo) => {
     if (isClosingRef.current) return;
-    setPrefillInfo(info);
     setClosing(false);
     setOpen(true);
   }, []);
