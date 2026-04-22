@@ -357,6 +357,15 @@ export function MealLogger({
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(initialMealType ?? null);
   // null = let AI infer from text; YYYY-MM-DD string = explicit date
   const [selectedDate, setSelectedDate] = useState<string | null>(initialDate ?? null);
+
+  // Sync controls when prefill props arrive while the panel is already mounted
+  useEffect(() => {
+    if (initialMealType) setSelectedMealType(initialMealType);
+  }, [initialMealType]);
+
+  useEffect(() => {
+    if (initialDate) setSelectedDate(initialDate);
+  }, [initialDate]);
   const [shareState, setShareState] = useState<'just-me' | 'all' | 'partial'>(defaultShareState);
   const [selectedCoEaters, setSelectedCoEaters] = useState<Set<string>>(
     defaultShareState === 'just-me' ? new Set() : new Set(householdMembers.map((m) => m.user_id))
