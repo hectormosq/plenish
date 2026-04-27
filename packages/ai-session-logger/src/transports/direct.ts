@@ -9,6 +9,8 @@ import type { LogEntry, Transport } from '../events'
  */
 export class DirectFileTransport implements Transport {
   write(entry: LogEntry): void {
+    // Vercel and other serverless runtimes have a read-only filesystem
+    if (process.env.VERCEL) return
     const date = entry.timestamp.split('T')[0]
     const logsDir = join(process.cwd(), 'logs')
     mkdirSync(logsDir, { recursive: true })
