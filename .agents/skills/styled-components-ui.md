@@ -26,6 +26,17 @@ src/
         └── MealCard.tsx
 ```
 
+## Component Library — Check Before Creating
+
+Before adding any new UI element (button, card, badge, input, spinner, title, etc.) to a feature file:
+
+1. Scan `src/components/ui/` for an existing component that fits or can be extended.
+2. If one exists — use or extend it. Never duplicate it inline inside a feature file.
+3. If nothing fits — create a new file in `src/components/ui/` first, then import it into the feature.
+4. Only place a component in `src/components/specific/` if it is inherently tied to a single domain concept (e.g. `MealLogger`, `CellActionPicker`).
+
+This check applies during planning, research, and implementation — not just at code-writing time.
+
 ## Component Guidelines
 
 1. **Colocation:** Keep styles and business logic colocated in the same file for generic UI components, unless the file becomes too large (in which case, split styles into `ComponentName.styles.ts`).
