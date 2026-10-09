@@ -5,7 +5,9 @@ export const ServingCategoryEnum = z.enum([
 ]);
 
 // Sparse servings — only non-zero categories stored.
-export const ServingsSchema = z.record(ServingCategoryEnum, z.number().int().min(1))
+// partialRecord: in Zod 4, z.record with enum keys requires every key, which rejects sparse maps.
+// Accept 0 from the model (to avoid Zod-rejection retry loops); zeros are stripped in execute().
+export const ServingsSchema = z.partialRecord(ServingCategoryEnum, z.number().int().min(0))
   .describe('Sparse map — include only categories with count >= 1. Omit zeroes.');
 
 export const NutritionSchema = z.object({

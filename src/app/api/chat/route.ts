@@ -25,9 +25,10 @@ export async function POST(req: Request) {
   const textPart    = lastUserMsg?.parts.find(isTextUIPart);
   const rawContent  = textPart?.text ?? '';
 
-  const { cleanText }       = parseMessagePrefixes(rawContent);
-  const { intent, signals } = classifyIntent(cleanText);
-  const tier: PromptTier    = intent === 'logging' ? 'base' : 'full';
+  const { cleanText, prefixes } = parseMessagePrefixes(rawContent);
+  const { intent, signals }    = classifyIntent(cleanText);
+  // A [mealType] prefix is UI-injected only when the user is in logging mode — always use base.
+  const tier: PromptTier = (intent === 'logging' || prefixes.mealType !== undefined) ? 'base' : 'full';
 
   // ── Prompt selection ──────────────────────────────────────────────────────
   const model  = getAIModel();

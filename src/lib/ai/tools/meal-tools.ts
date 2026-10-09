@@ -130,6 +130,11 @@ export function createMealTools(tzOffsetMinutes: number) {
 
       const shared = is_shared ?? false;
 
+      // Strip zero-value servings the model sometimes includes despite schema guidance
+      const cleanServings = Object.fromEntries(
+        Object.entries(nutrition.servings ?? {}).filter(([, v]) => (v as number) > 0),
+      );
+
       // Insert the meal log
       const { data, error } = await supabase
         .from('meal_logs')
@@ -138,7 +143,7 @@ export function createMealTools(tzOffsetMinutes: number) {
           log_text,
           meal_type,
           eaten_at: eaten_at ?? new Date().toISOString(),
-          nutrition: { ...nutrition, servings: nutrition.servings ?? {} },
+          nutrition: { ...nutrition, servings: cleanServings },
           inferred_ingredients: inferred_ingredients ?? null,
           is_shared: shared,
           household_id: shared ? (household_id ?? null) : null,
@@ -318,7 +323,7 @@ export function createMealTools(tzOffsetMinutes: number) {
       recipe_id: z.uuid().optional()
         .describe('Existing recipe UUID to link to this meal. Appended to recipe_ids.'),
       nutrition_patch: z.object({
-        servings: z.record(ServingCategoryEnum, z.number().int().min(0)).optional()
+        servings: z.partialRecord(ServingCategoryEnum, z.number().int().min(0)).optional()
           .describe('Partial servings update. Merges with existing; value 0 removes that category (sparse).'),
       }).optional()
         .describe("Partial update to nutrition when user corrects inferred portions. Sets portion_confidence to 'stated'."),
