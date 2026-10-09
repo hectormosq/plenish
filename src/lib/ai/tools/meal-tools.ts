@@ -323,7 +323,7 @@ export function createMealTools(tzOffsetMinutes: number) {
       recipe_id: z.uuid().optional()
         .describe('Existing recipe UUID to link to this meal. Appended to recipe_ids.'),
       nutrition_patch: z.object({
-        servings: z.record(ServingCategoryEnum, z.number().int().min(0)).optional()
+        servings: z.partialRecord(ServingCategoryEnum, z.number().int().min(0)).optional()
           .describe('Partial servings update. Merges with existing; value 0 removes that category (sparse).'),
       }).optional()
         .describe("Partial update to nutrition when user corrects inferred portions. Sets portion_confidence to 'stated'."),
