@@ -15,6 +15,8 @@ export const NutritionSchema = z.object({
     .describe('Which of the three food groups this meal covers.'),
   protein_type: z.enum(['white_meat', 'red_meat', 'fish_blue', 'fish_white', 'eggs', 'legumes'])
     .nullable()
+    // The model sometimes invents a value (e.g. "dairy"); store null instead of rejecting the call.
+    .catch(null)
     .describe('Primary protein type, or null if no protein.'),
   servings: ServingsSchema.optional()
     .describe('Sparse map of integer serving counts, NESTED inside the nutrition object. Keys: dairy, grains, fruit, vegetables, fish, meat, eggs, nuts, legumes. Only include categories with count >= 1 (whole integers). Omit zeroes and fractional values. Omit entirely if no serving counts can be determined.'),

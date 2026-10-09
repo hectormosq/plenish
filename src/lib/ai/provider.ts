@@ -109,15 +109,24 @@ const DEFAULT_PROFILE: DietProfile = {
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// getBaseSystemPrompt — lean prompt for logging intent (~200 tokens)
-// Skips the diet profile query entirely. Runs one lightweight household
-// membership query to determine sharing scope — returns null for solo users.
+// getBaseSystemPrompt — lean prompt for the logging tier (~150 tokens)
+// mode 'form': the logging form supplied meal type, date and sharing, so the
+//   model only describes the food. No database query at all.
+// mode 'chat': free-text logging; the model infers meal type, date and sharing.
+//   One lightweight membership query decides whether sharing cues apply.
 // ---------------------------------------------------------------------------
+
+export type LogPromptMode = 'form' | 'chat';
+
+const LOG_REPLY_RULES = `- After logging: reply with a single short confirmation only (e.g. "✓ Desayuno registrado."). No summaries, no gap analysis, no recommendations unless the user explicitly asks.
+- If a recipe_suggestion is returned: show the recipe name and ask whether to link it.
+- If no recipe_suggestion and ≥2 ingredients inferred: show inferred_ingredients and offer to save as a recipe.`;
 
 export async function getBaseSystemPrompt(
   tzOffsetMinutes: number,
   userId: string,
   supabase: SupabaseClient,
+  mode: LogPromptMode = 'chat',
 ): Promise<string> {
   const serverNow = new Date();
   const localMs   = serverNow.getTime() - tzOffsetMinutes * 60_000;
@@ -130,8 +139,24 @@ export async function getBaseSystemPrompt(
   });
   const dateLine = `${dateStr} at ${timeStr}`;
 
-  // One lightweight query to get household membership and sharing scope.
-  // Returns null for users with no household — no flag needed.
+  if (mode === 'form') {
+    return `Today: ${dateLine}
+
+You are an AI meal tracker. Be concise and practical.
+Respond in the user's language.
+
+The user is logging a meal through the form. The message is the meal description.
+
+# Tools
+
+## log_meal
+- Call it once with the description as log_text, exactly as the user wrote it. Never refuse, question, or ask for more information before logging.
+- The app has already set the meal type, date and sharing.
+- Infer: food_groups, protein_type, servings, has_occasional_food, portion_confidence, inferred_ingredients. Use general knowledge for portion sizes.
+${LOG_REPLY_RULES}`;
+  }
+
+  // One lightweight query: sharing cues only matter for users in a household.
   const { data: membershipRow } = await supabase
     .from('household_members')
     .select('household_id, role, households(name, id)')
@@ -139,28 +164,14 @@ export async function getBaseSystemPrompt(
     .eq('status', 'active')
     .maybeSingle();
 
-  let householdSection = '';
-
-  if (membershipRow) {
-    const household = membershipRow.households as unknown as { name: string; id: string } | null;
-    if (household) {
-      const { data: members } = await supabase
-        .from('household_members')
-        .select('user_id')
-        .eq('household_id', household.id)
-        .eq('status', 'active')
-        .neq('user_id', userId);
-
-      const coMemberIds = (members ?? []).map((m) => m.user_id as string);
-
-      householdSection = `
+  const householdSection = membershipRow
+    ? `
 # Household
 
-ID: ${household.id} | Role: ${membershipRow.role} | Co-members: ${coMemberIds.length > 0 ? coMemberIds.join(', ') : 'none'}
-"nosotros"/"comimos"/"en casa" → is_shared=true, co_eater_ids=[${coMemberIds.join(', ')}]
-"solo yo"/"just me" → is_shared=false`;
-    }
-  }
+The user shares a household.
+"nosotros"/"comimos"/"en casa" → is_shared=true
+"solo yo"/"just me" → is_shared=false`
+    : '';
 
   return `Today: ${dateLine}
 
@@ -170,11 +181,10 @@ ${householdSection}
 # Tools
 
 ## log_meal
-- Strip UI prefixes: [date: YYYY-MM-DD] → eaten_at=YYYY-MM-DDT12:00:00.000Z, [meal_type] → meal_type. Exclude prefixes from log_text. No date → now.
+- Call it once with exactly what the user said they ate. Never refuse, question, or ask for more information before logging.
+- meal_type: infer from the text or the time of day. eaten_at: set only when the user names another day or time.
 - Infer: food_groups, protein_type, servings, has_occasional_food, portion_confidence, inferred_ingredients. Use general knowledge for portion sizes.
-- After logging: reply with a single short confirmation only (e.g. "✓ Desayuno registrado."). No summaries, no gap analysis, no recommendations unless the user explicitly asks.
-- If a recipe_suggestion is returned: show the recipe name and ask whether to link it.
-- If no recipe_suggestion and ≥2 ingredients inferred: show inferred_ingredients and offer to save as a recipe.`;
+${LOG_REPLY_RULES}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -273,8 +283,8 @@ function buildSystemPrompt(dateLine: string, profile: DietProfile, household: Ho
   const householdSection = household
     ? `# Household
 
-ID: ${household.household_id} | Role: ${household.role} | Co-members: ${household.co_member_ids.length > 0 ? household.co_member_ids.join(', ') : 'none'}
-"nosotros"/"comimos"/"en casa" → is_shared=true, co_eater_ids=[${household.co_member_ids.join(', ')}]
+The user belongs to the household "${household.household_name}" with ${household.co_member_ids.length} other member(s).
+"nosotros"/"comimos"/"en casa" → is_shared=true
 "solo yo"/"just me" → is_shared=false
 get_daily_summary default: combined. "Solo para mí" → individual. "Para todos" → household.`
     : `# Household
@@ -315,7 +325,7 @@ ${formatPortionDefaults(profile.serving_sizes)}
 # Tools
 
 ## log_meal
-- Strip UI prefixes: [date: YYYY-MM-DD] → eaten_at=YYYY-MM-DDT12:00:00.000Z, [meal_type] → meal_type. Exclude prefixes from log_text. No date → now.
+- meal_type: infer from the text or the time of day. eaten_at: set only when the user names another day or time.
 - Infer: food_groups, protein_type, servings, has_occasional_food, portion_confidence, inferred_ingredients.
 - After logging: reply with a single short confirmation only (e.g. "✓ Desayuno registrado."). No summaries, no gap analysis, no recommendations unless the user explicitly asks.
 
