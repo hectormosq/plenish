@@ -94,7 +94,7 @@ Automatically managed by Supabase Auth (`auth.users`), but we track public profi
 - `instructions` (text, nullable) — step-by-step cooking instructions in free text
 - `prep_time_minutes` (int, nullable) — estimated preparation time
 - `estimated_calories` (int, nullable) — estimated calorie count
-- `status` (text) — `'planned'`, `'accepted'`, `'overridden'`, `'dismissed'`
+- `status` (text) — `'planned'`, `'accepted'`, `'overridden'`, `'dismissed'`, `'expired'`
 - `accepted_meal_id` (uuid, nullable) — if accepted, references `public.meal_logs`
 - `overridden_meal_id` (uuid, nullable) — if overridden, references `public.meal_logs`
 - `created_at` (timestamptz)

@@ -7,8 +7,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 <!-- END:nextjs-agent-rules -->
 
 @.agents/skills/plenish-context.md
-@.agents/skills/styled-components-ui.md
 
 ## UI Components
 
-When adding any new UI element, follow the `styled-components-ui` skill's component library rules before writing any code.
+When adding any new UI element, follow the component library rules in `.claude/rules/ui-components.md` before writing any code.
