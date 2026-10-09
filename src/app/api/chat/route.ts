@@ -1,8 +1,7 @@
 import { streamText, convertToModelMessages, stepCountIs, isTextUIPart } from 'ai';
 import type { UIMessage } from 'ai';
 import { getAIModel, getModelName, getBaseSystemPrompt, getFullSystemPrompt } from '@/lib/ai/provider';
-import { parseMessagePrefixes, classifyIntent } from '@/lib/ai/intent-classifier';
-import type { PromptTier } from '@/lib/ai/intent-classifier';
+import { resolvePromptTier } from '@/lib/ai/intent-classifier';
 import { createClient } from '@/lib/supabase/server';
 import { createMealTools } from '@/lib/ai/tools/meal-tools';
 import { createPlanMealsTool } from '@/lib/ai/tools/plan-tools';
@@ -25,10 +24,7 @@ export async function POST(req: Request) {
   const textPart    = lastUserMsg?.parts.find(isTextUIPart);
   const rawContent  = textPart?.text ?? '';
 
-  const { cleanText, prefixes } = parseMessagePrefixes(rawContent);
-  const { intent, signals }    = classifyIntent(cleanText);
-  // A [mealType] prefix is UI-injected only when the user is in logging mode — always use base.
-  const tier: PromptTier = (intent === 'logging' || prefixes.mealType !== undefined) ? 'base' : 'full';
+  const { tier, signals } = resolvePromptTier(rawContent);
 
   // ── Prompt selection ──────────────────────────────────────────────────────
   const model  = getAIModel();

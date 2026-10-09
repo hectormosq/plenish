@@ -69,6 +69,24 @@ export function parseMessagePrefixes(raw: string): ParsedMessage {
   return { cleanText: cleanText.trim(), prefixes };
 }
 
+// ─── Tier resolution ────────────────────────────────────────────────────────
+
+export interface PromptTierResolution extends IntentClassification {
+  tier: PromptTier;
+}
+
+/**
+ * Decides which prompt tier serves a raw chat message (UI prefixes included).
+ * Single source of the routing rule — used by the chat route and by the evals.
+ */
+export function resolvePromptTier(rawContent: string): PromptTierResolution {
+  const { cleanText, prefixes } = parseMessagePrefixes(rawContent);
+  const { intent, signals }     = classifyIntent(cleanText);
+  // A [mealType] prefix is UI-injected only when the user is in logging mode — always use base.
+  const tier: PromptTier = (intent === 'logging' || prefixes.mealType !== undefined) ? 'base' : 'full';
+  return { tier, intent, signals };
+}
+
 // ─── Signal sets ────────────────────────────────────────────────────────────
 // Exported for extensibility — a future trained classifier can import and
 // extend these lists without changing the classifyIntent() interface.
