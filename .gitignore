@@ -49,3 +49,6 @@ specs/claude/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ai session logs (contain user ids and prompts)
+logs/

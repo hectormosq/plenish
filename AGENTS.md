@@ -8,3 +8,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 @.agents/skills/plenish-context.md
 @.agents/skills/styled-components-ui.md
+
+## UI Components
+
+When adding any new UI element, follow the `styled-components-ui` skill's component library rules before writing any code.
