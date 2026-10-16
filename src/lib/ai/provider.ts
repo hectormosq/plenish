@@ -43,16 +43,16 @@ export function getAIModel(): LanguageModel {
 // Diet profile types (mirrors user_diet_profiles table)
 // ---------------------------------------------------------------------------
 
-interface ServingTarget { min?: number; max?: number }
+export interface ServingTarget { min?: number; max?: number }
 
-interface HouseholdContext {
+export interface HouseholdContext {
   household_id: string;
   household_name: string;
   role: 'admin' | 'member';
   co_member_ids: string[];
 }
 
-interface DietProfile {
+export interface DietProfile {
   daily_targets:  Record<string, ServingTarget>;
   weekly_targets: Record<string, ServingTarget>;
   restrictions: {
@@ -192,22 +192,30 @@ ${LOG_REPLY_RULES}`;
 // Loads diet profile and household context. Renamed from getSystemPrompt.
 // ---------------------------------------------------------------------------
 
-export async function getFullSystemPrompt(
-  tzOffsetMinutes: number,
-  userId: string,
-  supabase: SupabaseClient,
-): Promise<string> {
-  // Resolve current local time for the user
-  const serverNow = new Date();
-  const localMs   = serverNow.getTime() - tzOffsetMinutes * 60_000;
-  const localNow  = new Date(localMs);
-  const dateStr   = localNow.toLocaleDateString('en-US', {
+/** "Friday, October 16, 2026 at 01:05 PM" in the user's local time. */
+export function formatLocalDateLine(tzOffsetMinutes: number): string {
+  const localNow = new Date(Date.now() - tzOffsetMinutes * 60_000);
+  const dateStr  = localNow.toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
   });
   const timeStr = localNow.toLocaleTimeString('en-US', {
     hour: '2-digit', minute: '2-digit', timeZone: 'UTC',
   });
+  return `${dateStr} at ${timeStr}`;
+}
 
+export interface PromptContext {
+  dateLine: string;
+  profile: DietProfile;
+  household: HouseholdContext | null;
+}
+
+/** Loads the user's diet profile and household for prompt building. */
+export async function loadPromptContext(
+  tzOffsetMinutes: number,
+  userId: string,
+  supabase: SupabaseClient,
+): Promise<PromptContext> {
   // Load diet profile and household membership in parallel
   const [{ data: profileRow }, { data: membershipRow }] = await Promise.all([
     supabase
@@ -233,34 +241,43 @@ export async function getFullSystemPrompt(
     : DEFAULT_PROFILE;
 
   // Fetch active co-members if the user is in a household
-  let householdContext: HouseholdContext | null = null;
+  let household: HouseholdContext | null = null;
   if (membershipRow) {
-    const household = membershipRow.households as unknown as { name: string; id: string } | null;
-    if (household) {
+    const row = membershipRow.households as unknown as { name: string; id: string } | null;
+    if (row) {
       const { data: members } = await supabase
         .from('household_members')
         .select('user_id, role')
-        .eq('household_id', household.id)
+        .eq('household_id', row.id)
         .eq('status', 'active')
         .neq('user_id', userId);
 
-      householdContext = {
-        household_id: household.id,
-        household_name: household.name,
+      household = {
+        household_id: row.id,
+        household_name: row.name,
         role: membershipRow.role as 'admin' | 'member',
         co_member_ids: (members ?? []).map((m) => m.user_id as string),
       };
     }
   }
 
-  return buildSystemPrompt(`${dateStr} at ${timeStr}`, profile, householdContext);
+  return { dateLine: formatLocalDateLine(tzOffsetMinutes), profile, household };
+}
+
+export async function getFullSystemPrompt(
+  tzOffsetMinutes: number,
+  userId: string,
+  supabase: SupabaseClient,
+): Promise<string> {
+  const { dateLine, profile, household } = await loadPromptContext(tzOffsetMinutes, userId, supabase);
+  return buildSystemPrompt(dateLine, profile, household);
 }
 
 // ---------------------------------------------------------------------------
 // buildSystemPrompt — injects diet profile values dynamically
 // ---------------------------------------------------------------------------
 
-function formatDietProfile(profile: DietProfile): string {
+export function formatDietProfile(profile: DietProfile): string {
   const fmt = (targets: Record<string, ServingTarget>) =>
     Object.entries(targets)
       .map(([cat, t]) => {
@@ -277,6 +294,16 @@ function formatPortionDefaults(sizes: Record<string, { category: string }>): str
   return Object.entries(sizes)
     .map(([food, { category }]) => `${food} → ${category}`)
     .join(' | ');
+}
+
+/** Recommendation guidelines derived from the diet profile. */
+export function formatMealRules(profile: DietProfile): string {
+  return `- Lunch/dinner must cover 3 groups: Vitaminas (vegetables, fruit, greens) + Proteínas (meat, fish, eggs, legumes) + Hidratos (pasta, potato, rice; prefer whole grain)
+- Breakfast: 1 dairy + 1 fruit + 1 whole grain
+- Snack: dairy + fruit OR small sandwich
+- Protein rotation (weekly cycle): ${profile.restrictions.protein_rotation.join(' → ')}
+- No same dish within ${profile.restrictions.no_repeat_hours}h
+- Occasional only: ${profile.restrictions.occasional_foods.join(', ')}`;
 }
 
 function buildSystemPrompt(dateLine: string, profile: DietProfile, household: HouseholdContext | null = null): string {
@@ -307,12 +334,7 @@ ${formatDietProfile(profile)}
 
 These are guidelines for **recommendations only** — never block, question, or delay logging a meal because it doesn't follow them. Always log what the user says they ate, exactly as described.
 
-- Lunch/dinner must cover 3 groups: Vitaminas (vegetables, fruit, greens) + Proteínas (meat, fish, eggs, legumes) + Hidratos (pasta, potato, rice; prefer whole grain)
-- Breakfast: 1 dairy + 1 fruit + 1 whole grain
-- Snack: dairy + fruit OR small sandwich
-- Protein rotation (weekly cycle): ${profile.restrictions.protein_rotation.join(' → ')}
-- No same dish within ${profile.restrictions.no_repeat_hours}h
-- Occasional only: ${profile.restrictions.occasional_foods.join(', ')}
+${formatMealRules(profile)}
 
 # User Preferences
 
