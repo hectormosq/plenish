@@ -407,32 +407,22 @@ export function MealLogger({
     e.preventDefault();
     if (!localInput.trim()) return;
 
-    // Build prefixes so the AI has explicit context. If absent, the AI
-    // parses natural language ("ayer", "yesterday") or asks the user.
-    const parts: string[] = [];
-    if (selectedDate && selectedDate !== todayISO()) {
-      parts.push(`[date: ${selectedDate}]`);
-    }
-    if (selectedMealType) {
-      parts.push(`[${selectedMealType}]`);
-    }
-    // FR-007: pass co-eater context so the AI logs it shared correctly
-    if (shareState === 'all') {
-      parts.push('[shared with: all]');
-    } else if (shareState === 'partial') {
-      const names = householdMembers
-        .filter((m) => selectedCoEaters.has(m.user_id))
-        .map((m) => m.display_name);
-      if (names.length > 0) parts.push(`[shared with: ${names.join(', ')}]`);
-    }
-    const text = parts.length > 0 ? `${parts.join(' ')} ${localInput}` : localInput;
+    // What the form already knows travels as request fields, not as text the
+    // AI has to parse. The server applies these values when the meal is saved.
+    // FR-007: co-eater context so the meal is logged as shared correctly.
+    const logContext = {
+      mealType: selectedMealType,
+      date: selectedDate && selectedDate !== todayISO() ? selectedDate : null,
+      shareState,
+      coEaterIds: shareState === 'partial' ? [...selectedCoEaters] : null,
+    };
 
     session.userMessage(localInput, {
       mealType: selectedMealType,
       date: selectedDate ?? todayISO(),
       shareState,
     });
-    sendMessage({ text });
+    sendMessage({ text: localInput }, { body: { logContext } });
     setLocalInput('');
     setSelectedMealType(null);
     setSelectedDate(null);

@@ -1,15 +1,16 @@
-// Logging eval — replays real logged meals through the model with stubbed tools.
+// Logging eval — replays real logged meals through the model the way the logging form sends them.
+// Uses the same turn setup as the chat route; only the database write is replaced.
 // Costs API calls. Dataset: node evals/build-dataset.mjs
 // Env: EVAL_LIMIT=<n> to run a subset, EVAL_PROVIDER=google|openai (default openai).
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { generateText, stepCountIs } from 'ai';
-import type { ToolSet } from 'ai';
-import { getAIModel, getModelName, getBaseSystemPrompt, getFullSystemPrompt } from '@/lib/ai/provider';
-import { resolvePromptTier } from '@/lib/ai/intent-classifier';
-import { createMealTools } from '@/lib/ai/tools/meal-tools';
+import { generateText } from 'ai';
+import { getAIModel, getModelName } from '@/lib/ai/provider';
+import { buildChatTurn, turnLoopSettings } from '@/lib/ai/chat-turn';
+import type { LogContext } from '@/lib/ai/log-context';
+import type { MealToSave } from '@/lib/ai/tools/meal-tools';
 import { createFakeSupabase, EVAL_HOUSEHOLD, EVAL_USER_ID } from './lib/fake-supabase';
 import { printPassRates, saveResults } from './lib/report';
 
@@ -21,74 +22,52 @@ interface LoggingCase {
   shareState: 'all' | 'partial' | 'just-me';
 }
 
-interface LoggedMealInput {
-  log_text?: string;
-  meal_type?: string;
-  eaten_at?: string;
-  is_shared?: boolean;
-  nutrition?: unknown;
-}
-
 const DATASET = join('evals', 'datasets', 'logging.local.json');
 const CONCURRENCY = 4;
-const MAX_STEPS = 7; // same limit as the chat route
 const TZ_OFFSET = -120;
 
-// Mirrors how MealLogger composes the message it sends to the chat route.
-function buildUiMessage(c: LoggingCase): string {
-  const parts = [`[date: ${c.date}]`, `[${c.mealType}]`];
-  if (c.shareState === 'all') parts.push('[shared with: all]');
-  return `${parts.join(' ')} ${c.text}`;
+// Mirrors the request fields MealLogger sends next to the message.
+function buildLogContext(c: LoggingCase): LogContext {
+  return { mealType: c.mealType, date: c.date, shareState: c.shareState, coEaterIds: null };
 }
 
-// Keeps a tool's description and schema but replaces its side effects.
-function stub<T extends object>(realTool: T, execute: (input: never) => Promise<unknown>): T {
-  return { ...realTool, execute } as T;
+// "Invalid input for tool …: Value: {…}. Error message: […]" — keep the part that says why.
+function describeToolError(error: unknown): string {
+  const message = (error instanceof Error ? error.message : String(error)).replace(/\s+/g, ' ');
+  const reason = message.split('Error message:')[1];
+  return (reason ?? message).trim().slice(0, 300);
 }
 
 async function runCase(c: LoggingCase) {
-  const message = buildUiMessage(c);
-  const { tier } = resolvePromptTier(message);
-  const supabase = createFakeSupabase(EVAL_HOUSEHOLD);
-  const system = tier === 'base'
-    ? await getBaseSystemPrompt(TZ_OFFSET, EVAL_USER_ID, supabase)
-    : await getFullSystemPrompt(TZ_OFFSET, EVAL_USER_ID, supabase);
-
-  const executed: LoggedMealInput[] = [];
-  const real = createMealTools(TZ_OFFSET);
-  const logMeal = stub(real.logMealTool, async (input: LoggedMealInput) => {
-    executed.push(input);
-    return {
-      success: true,
-      meal_id: '00000000-0000-4000-8000-00000000beef',
-      meal_type: input.meal_type,
-      nutrition: input.nutrition,
-      is_shared: input.is_shared ?? false,
-      participants: [],
-      recipe_suggestion: null,
-    };
-  });
-  const noop = async () => ({ success: true, meals: [], count: 0 });
-
-  // Cast: the two tier-specific tool sets do not unify into one inferred type.
-  const tools = (tier === 'base'
-    ? { log_meal: logMeal }
-    : {
-        log_meal:          logMeal,
-        get_meals:         stub(real.getMealsTool, noop),
-        save_recipe:       stub(real.saveRecipeTool, noop),
-        delete_meal:       stub(real.deleteMealTool, noop),
-        update_meal:       stub(real.updateMealTool, noop),
-        get_daily_summary: stub(real.getDailySummaryTool, noop),
-      }) as unknown as ToolSet;
+  const saved: MealToSave[] = [];
 
   try {
+    const turn = await buildChatTurn({
+      lastUserText:    c.text,
+      logContext:      buildLogContext(c),
+      tzOffsetMinutes: TZ_OFFSET,
+      userId:          EVAL_USER_ID,
+      supabase:        createFakeSupabase(EVAL_HOUSEHOLD),
+      saveMealLog: async (meal) => {
+        saved.push(meal);
+        return {
+          success: true,
+          meal_id: '00000000-0000-4000-8000-00000000beef',
+          meal_type: meal.meal_type,
+          nutrition: meal.nutrition,
+          is_shared: meal.shared,
+          participants: [],
+          recipe_suggestion: null,
+        };
+      },
+    });
+
     const result = await generateText({
       model: getAIModel(),
-      system,
-      messages: [{ role: 'user', content: message }],
-      tools,
-      stopWhen: stepCountIs(MAX_STEPS),
+      system: turn.system,
+      messages: [{ role: 'user', content: c.text }],
+      tools: turn.tools,
+      ...turnLoopSettings(turn),
     });
 
     const attempts = result.steps
@@ -98,19 +77,16 @@ async function runCase(c: LoggingCase) {
     const toolErrors = result.steps
       .flatMap((s) => s.content)
       .filter((part) => part.type === 'tool-error')
-      .map((part) => {
-        const error = (part as { error: unknown }).error;
-        return (error instanceof Error ? error.message : String(error)).replace(/\s+/g, ' ').slice(0, 400);
-      });
-    const logged = executed[0];
-    const expectShared = c.shareState === 'all';
+      .map((part) => describeToolError((part as { error: unknown }).error));
+    const meal = saved[0];
 
     return {
       id: c.id,
       text: c.text,
-      tier,
+      tier: turn.tier,
+      mode: turn.mode,
       attempts,
-      executed: executed.length,
+      saved: saved.length,
       steps: result.steps.length,
       reply: result.text,
       toolErrors,
@@ -118,14 +94,14 @@ async function runCase(c: LoggingCase) {
       outputTokens: result.totalUsage.outputTokens ?? 0,
       error: null as string | null,
       checks: {
-        'routed to base tier':      tier === 'base',
-        'meal was logged':          executed.length >= 1,
-        'logged exactly once':      executed.length === 1,
+        'routed to base tier':      turn.tier === 'base',
+        'meal was logged':          saved.length >= 1,
+        'logged exactly once':      saved.length === 1,
         'single tool attempt':      attempts === 1,
-        'meal_type matches chip':   logged?.meal_type === c.mealType,
-        'date matches chip':        logged?.eaten_at?.startsWith(c.date) ?? false,
-        'sharing matches chip':     c.shareState === 'partial' || (logged?.is_shared ?? false) === expectShared,
-        'prefixes stripped':        logged?.log_text !== undefined && !logged.log_text.includes('['),
+        'meal_type matches chip':   meal?.meal_type === c.mealType,
+        'date matches chip':        meal?.eaten_at.startsWith(c.date) ?? false,
+        'sharing matches chip':     meal !== undefined && meal.shared === (c.shareState !== 'just-me'),
+        'description kept':         meal !== undefined && meal.log_text.length > 0 && !meal.log_text.includes('['),
         'short confirmation reply': result.text.length > 0 && result.text.length <= 120,
       } as Record<string, boolean>,
     };
@@ -133,9 +109,10 @@ async function runCase(c: LoggingCase) {
     return {
       id: c.id,
       text: c.text,
-      tier,
+      tier: 'base' as const,
+      mode: 'form' as const,
       attempts: 0,
-      executed: executed.length,
+      saved: saved.length,
       steps: 0,
       reply: '',
       toolErrors: [] as string[],
@@ -181,7 +158,7 @@ describe('logging eval', () => {
       `tokens: ${inputTokens} in / ${outputTokens} out`,
     );
 
-    const problems = results.filter((r) => r.error || r.attempts !== 1 || r.executed !== 1);
+    const problems = results.filter((r) => r.error || r.attempts !== 1 || r.saved !== 1);
     if (problems.length > 0) {
       console.log('Cases with errors, retries or no log:');
       console.table(
@@ -189,8 +166,8 @@ describe('logging eval', () => {
           id: p.id,
           text: p.text.slice(0, 40),
           attempts: p.attempts,
-          executed: p.executed,
-          error: p.error?.slice(0, 60) ?? '',
+          saved: p.saved,
+          error: p.error?.slice(0, 80) ?? '',
         })),
       );
     }

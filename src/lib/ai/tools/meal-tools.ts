@@ -6,15 +6,33 @@ import {
   ServingCategoryEnum,
   NutritionSchema,
 } from '@/lib/ai/nutrition-schemas';
+import type { MealNutrition } from '@/lib/ai/nutrition-schemas';
+import { MealTypeEnum, resolveLogFields } from '@/lib/ai/log-context';
+import type { LogContext, ResolvedLogFields } from '@/lib/ai/log-context';
+
+export interface MealToSave extends ResolvedLogFields {
+  nutrition: MealNutrition;
+  inferred_ingredients?: string[];
+}
+
+export type SaveMealLog = (meal: MealToSave) => Promise<Record<string, unknown>>;
+
+export interface MealToolsOptions {
+  /** Values the logging form already knows; they override what the model infers. */
+  logContext?: LogContext | null;
+  /** Replaces the database write — used by the evals. */
+  saveMealLog?: SaveMealLog;
+}
 
 // ---------------------------------------------------------------------------
-// createMealTools(tzOffsetMinutes)
+// createMealTools(tzOffsetMinutes, options)
 // Factory that returns all meal tools closed over the user's UTC offset.
 // tzOffsetMinutes: value of new Date().getTimezoneOffset() from the browser
 //   (positive = behind UTC, e.g. UTC-5 → 300; negative = ahead, UTC+2 → -120)
 // ---------------------------------------------------------------------------
-export function createMealTools(tzOffsetMinutes: number) {
+export function createMealTools(tzOffsetMinutes: number, options: MealToolsOptions = {}) {
   const tz = Number.isFinite(tzOffsetMinutes) ? tzOffsetMinutes : 0;
+  const logContext = options.logContext ?? null;
 
   // ---------------------------------------------------------------------------
   // Shared timezone helper — returns { rangeStart, rangeEnd } ISO strings
@@ -89,109 +107,173 @@ export function createMealTools(tzOffsetMinutes: number) {
   });
 
   // ---------------------------------------------------------------------------
-  // logMealTool
+  // saveMealLog — the single write path for a logged meal.
+  // Household and co-eaters are resolved here from the database, never taken
+  // from the model, so a meal can only be shared with real co-members.
+  // ---------------------------------------------------------------------------
+  const saveMealLogToDb: SaveMealLog = async (meal) => {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) return { success: false, error: 'Unauthorized' };
+
+    let householdId: string | null = null;
+    let coEaters: string[] = [];
+    if (meal.shared) {
+      const { data: membership } = await supabase
+        .from('household_members')
+        .select('household_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (membership) {
+        householdId = membership.household_id as string;
+        const { data: members } = await supabase
+          .from('household_members')
+          .select('user_id')
+          .eq('household_id', householdId)
+          .eq('status', 'active')
+          .neq('user_id', user.id);
+
+        const memberIds = (members ?? [])
+          .map((m) => m.user_id as string | null)
+          .filter((id): id is string => Boolean(id));
+        const requested = meal.coEaterIds;
+        coEaters = requested === 'all'
+          ? memberIds
+          : requested.filter((id) => memberIds.includes(id));
+      }
+    }
+    // A meal can only be shared inside a household.
+    const shared = meal.shared && householdId !== null;
+
+    // Insert the meal log
+    const { data, error } = await supabase
+      .from('meal_logs')
+      .insert({
+        user_id: user.id,
+        log_text: meal.log_text,
+        meal_type: meal.meal_type,
+        eaten_at: meal.eaten_at,
+        nutrition: meal.nutrition,
+        inferred_ingredients: meal.inferred_ingredients ?? null,
+        is_shared: shared,
+        household_id: shared ? householdId : null,
+      })
+      .select('id')
+      .single();
+
+    if (error) return { success: false, error: error.message };
+
+    // Insert co-eater participant rows for shared meals
+    const participants: string[] = [];
+    if (shared && coEaters.length > 0) {
+      const rows = coEaters.map((uid) => ({ meal_log_id: data.id, user_id: uid }));
+      const { error: pError } = await supabase.from('meal_participants').insert(rows);
+      if (!pError) participants.push(...coEaters);
+    }
+
+    // Search for an existing recipe by name similarity (ilike on most distinctive word)
+    const words = meal.log_text.split(/\s+/);
+    const keyword = words.find(w => w.length > 4) ?? words[0];
+    const { data: match } = await supabase
+      .from('recipes')
+      .select('id, name, ingredients')
+      .eq('user_id', user.id)
+      .ilike('name', `%${keyword}%`)
+      .limit(1)
+      .maybeSingle();
+
+    // Auto-clear any active plan for this slot
+    const mealDate = meal.eaten_at.split('T')[0];
+    await supabase
+      .from('planned_meals')
+      .update({ status: 'overridden', overridden_meal_id: data.id })
+      .eq('user_id', user.id)
+      .eq('meal_type', meal.meal_type)
+      .eq('planned_date', mealDate)
+      .eq('status', 'planned');
+
+    revalidatePath('/dashboard');
+    return {
+      success: true,
+      meal_id: data.id as string,
+      meal_type: meal.meal_type,
+      nutrition: meal.nutrition,
+      is_shared: shared,
+      participants,
+      recipe_suggestion: match ?? null,
+    };
+  };
+
+  const saveMealLog = options.saveMealLog ?? saveMealLogToDb;
+
+  // Strip zero-value servings the model sometimes includes despite schema guidance
+  const cleanNutrition = (nutrition: MealNutrition): MealNutrition => ({
+    ...nutrition,
+    servings: Object.fromEntries(
+      Object.entries(nutrition.servings ?? {}).filter(([, v]) => (v as number) > 0),
+    ),
+  });
+
+  const describedMealFields = {
+    log_text: z.string().min(1).max(500)
+      .describe('Free-text description of the meal as described by the user.'),
+    nutrition: NutritionSchema,
+    inferred_ingredients: z.array(z.string()).optional()
+      .describe(
+        'Ingredient strings inferred from the description. Include quantity and unit when stated ' +
+        '(e.g. "1 arepa (60g harina de maíz)", "40g queso feta"). ' +
+        'Populate even when a recipe_suggestion might exist — it is cleared automatically if the user links a recipe.',
+      ),
+  };
+
+  // ---------------------------------------------------------------------------
+  // formLogMealTool — used when the logging form supplied the meal type.
+  // Meal type, date and sharing come from the form, so the model only describes
+  // the food.
+  // ---------------------------------------------------------------------------
+  const formLogMealTool = tool({
+    description:
+      'Record the meal the user just described. ' +
+      'The app has already set the meal type, date and sharing — provide only the description, ' +
+      'the inferred nutrition and the inferred ingredients.',
+    inputSchema: z.object(describedMealFields),
+    execute: async ({ log_text, nutrition, inferred_ingredients }) =>
+      saveMealLog({
+        ...resolveLogFields({ log_text }, logContext, new Date().toISOString()),
+        nutrition: cleanNutrition(nutrition),
+        inferred_ingredients,
+      }),
+  });
+
+  // ---------------------------------------------------------------------------
+  // logMealTool — free-text chat logging; the model infers meal type and date.
+  // Any value the form did provide (date, sharing) still wins.
   // ---------------------------------------------------------------------------
   const logMealTool = tool({
     description:
       'Record a meal the user just described to their meal history. ' +
       'Infer the meal_type (breakfast, lunch, dinner, snack) from conversation context or time of day. ' +
-      'Always infer nutrition and inferred_ingredients from the description — use the serving_sizes from the diet profile in the system prompt as portion defaults. ' +
-      'After calling this tool, check the returned recipe_suggestion: if present, show the recipe preview to the user and ask whether to link it. ' +
-      'If no recipe_suggestion and ≥2 ingredients were inferred, show the inferred_ingredients list and offer to save it as a recipe. ' +
-      'Always show the inferred servings to the user so they can correct them.',
+      'Always infer nutrition and inferred_ingredients from the description.',
     inputSchema: z.object({
-      log_text: z.string().min(1).max(500)
-        .describe('Free-text description of the meal as described by the user.'),
-      meal_type: z.enum(['breakfast', 'lunch', 'dinner', 'snack'])
+      ...describedMealFields,
+      meal_type: MealTypeEnum
         .describe('Type of meal inferred from context.'),
       eaten_at: z.string().optional()
-        .describe('ISO 8601 timestamp of when the meal was eaten. If the message contains [date: YYYY-MM-DD], set this to YYYY-MM-DDT12:00:00.000Z using that date. Defaults to now only when no date prefix is present.'),
-      nutrition: NutritionSchema,
-      inferred_ingredients: z.array(z.string()).optional()
-        .describe(
-          'Ingredient strings inferred from the description. Include quantity and unit when stated ' +
-          '(e.g. "1 arepa (60g harina de maíz)", "40g queso feta"). ' +
-          'Populate even when a recipe_suggestion might exist — it is cleared automatically if the user links a recipe.',
-        ),
+        .describe('ISO 8601 timestamp of when the meal was eaten. Set only when the user names another day or time; omit for now.'),
       is_shared: z.boolean().optional().default(false)
         .describe(
           'True when multiple household members ate this meal together. ' +
           'Set when the user uses first-person plural cues: "comimos", "cenamos", "todos", "en casa juntos".',
         ),
-      household_id: z.uuid().optional()
-        .describe('Household UUID from system context. Set only when is_shared=true.'),
-      co_eater_ids: z.array(z.uuid()).optional()
-        .describe('User IDs of household members who also ate this meal (excludes the logger). From system context.'),
     }),
-    execute: async ({ log_text, meal_type, eaten_at, nutrition, inferred_ingredients, is_shared, household_id, co_eater_ids }) => {
-      const supabase = await createClient();
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) return { success: false, error: 'Unauthorized' };
-
-      const shared = is_shared ?? false;
-
-      // Strip zero-value servings the model sometimes includes despite schema guidance
-      const cleanServings = Object.fromEntries(
-        Object.entries(nutrition.servings ?? {}).filter(([, v]) => (v as number) > 0),
-      );
-
-      // Insert the meal log
-      const { data, error } = await supabase
-        .from('meal_logs')
-        .insert({
-          user_id: user.id,
-          log_text,
-          meal_type,
-          eaten_at: eaten_at ?? new Date().toISOString(),
-          nutrition: { ...nutrition, servings: cleanServings },
-          inferred_ingredients: inferred_ingredients ?? null,
-          is_shared: shared,
-          household_id: shared ? (household_id ?? null) : null,
-        })
-        .select('id')
-        .single();
-
-      if (error) return { success: false, error: error.message };
-
-      // Insert co-eater participant rows for shared meals
-      const participants: string[] = [];
-      if (shared && co_eater_ids && co_eater_ids.length > 0) {
-        const rows = co_eater_ids.map((uid) => ({ meal_log_id: data.id, user_id: uid }));
-        const { error: pError } = await supabase.from('meal_participants').insert(rows);
-        if (!pError) participants.push(...co_eater_ids);
-      }
-
-      // Search for an existing recipe by name similarity (ilike on most distinctive word)
-      const keyword = log_text.split(/\s+/).find(w => w.length > 4) ?? log_text.split(/\s+/)[0];
-      const { data: match } = await supabase
-        .from('recipes')
-        .select('id, name, ingredients')
-        .eq('user_id', user.id)
-        .ilike('name', `%${keyword}%`)
-        .limit(1)
-        .maybeSingle();
-
-      // Auto-clear any active plan for this slot
-      const mealDate = new Date(eaten_at ?? new Date().toISOString()).toISOString().split('T')[0];
-      await supabase
-        .from('planned_meals')
-        .update({ status: 'overridden', overridden_meal_id: data.id })
-        .eq('user_id', user.id)
-        .eq('meal_type', meal_type)
-        .eq('planned_date', mealDate)
-        .eq('status', 'planned');
-
-      revalidatePath('/dashboard');
-      return {
-        success: true,
-        meal_id: data.id,
-        meal_type,
-        nutrition,
-        is_shared: shared,
-        participants,
-        recipe_suggestion: match ?? null,
-      };
-    },
+    execute: async ({ log_text, meal_type, eaten_at, is_shared, nutrition, inferred_ingredients }) =>
+      saveMealLog({
+        ...resolveLogFields({ log_text, meal_type, eaten_at, is_shared }, logContext, new Date().toISOString()),
+        nutrition: cleanNutrition(nutrition),
+        inferred_ingredients,
+      }),
   });
 
   // ---------------------------------------------------------------------------
@@ -585,6 +667,7 @@ export function createMealTools(tzOffsetMinutes: number) {
   return {
     getMealsTool,
     logMealTool,
+    formLogMealTool,
     saveRecipeTool,
     deleteMealTool,
     updateMealTool,
