@@ -43,6 +43,7 @@ async function runCase(c: LoggingCase) {
 
   try {
     const turn = await buildChatTurn({
+      model:           getAIModel(),
       lastUserText:    c.text,
       logContext:      buildLogContext(c),
       tzOffsetMinutes: TZ_OFFSET,
@@ -83,8 +84,7 @@ async function runCase(c: LoggingCase) {
     return {
       id: c.id,
       text: c.text,
-      tier: turn.tier,
-      mode: turn.mode,
+      agent: turn.agent,
       attempts,
       saved: saved.length,
       steps: result.steps.length,
@@ -94,7 +94,7 @@ async function runCase(c: LoggingCase) {
       outputTokens: result.totalUsage.outputTokens ?? 0,
       error: null as string | null,
       checks: {
-        'routed to base tier':      turn.tier === 'base',
+        'handled by form agent':    turn.agent === 'form',
         'meal was logged':          saved.length >= 1,
         'logged exactly once':      saved.length === 1,
         'single tool attempt':      attempts === 1,
@@ -109,8 +109,7 @@ async function runCase(c: LoggingCase) {
     return {
       id: c.id,
       text: c.text,
-      tier: 'base' as const,
-      mode: 'form' as const,
+      agent: 'form' as const,
       attempts: 0,
       saved: saved.length,
       steps: 0,
