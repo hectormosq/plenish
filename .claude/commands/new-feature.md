@@ -10,4 +10,4 @@ Scaffold a new Plenish feature end-to-end following the established patterns.
 - Follow the slot pattern: `RecentMeals.tsx` + `RecentMealsList.tsx` is the reference.
 - styled-components only — no Tailwind.
 - New tables always need RLS enabled and policies defined in the same migration file.
-- Follow the `styled-components-ui` skill for component library rules — check `src/components/ui/` before creating any new UI element.
+- Follow `.claude/rules/ui-components.md` for component library rules — check `src/components/ui/` before creating any new UI element.

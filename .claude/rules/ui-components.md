@@ -1,6 +1,7 @@
 ---
-name: styled-components-ui
-description: Guidelines for building and structuring UI components with styled-components.
+paths:
+  - "src/components/**"
+  - "src/app/**/*.tsx"
 ---
 
 # Styled Components UI Structure
