@@ -1,0 +1,35 @@
+[
+  { "id": "r01", "text": "Comí arepa con queso", "expectedTier": "base", "kind": "logging" },
+  { "id": "r02", "text": "Desayuné tostadas con huevo y espinacas", "expectedTier": "base", "kind": "logging" },
+  { "id": "r03", "text": "I had pasta for lunch", "expectedTier": "base", "kind": "logging" },
+  { "id": "r04", "text": "Cenamos pizza en casa", "expectedTier": "base", "kind": "logging" },
+  { "id": "r05", "text": "Me tomé un café con leche", "expectedTier": "base", "kind": "logging" },
+  { "id": "r06", "text": "[snack] Mango", "expectedTier": "base", "kind": "logging" },
+  { "id": "r07", "text": "[date: 2026-05-28] [lunch] [shared with: all] Dorada al horno con patatas", "expectedTier": "base", "kind": "logging" },
+  { "id": "r08", "text": "[dinner] Ensalada de tomate y chocolate de postre", "expectedTier": "base", "kind": "logging" },
+  { "id": "r09", "text": "Almorzamos lentejas con arroz", "expectedTier": "base", "kind": "logging" },
+  { "id": "r10", "text": "Just ate a banana", "expectedTier": "base", "kind": "logging" },
+
+  { "id": "r11", "text": "¿Qué comí ayer?", "expectedTier": "full", "kind": "management" },
+  { "id": "r12", "text": "¿Qué comimos el domingo?", "expectedTier": "full", "kind": "management" },
+  { "id": "r13", "text": "Borra el desayuno de hoy", "expectedTier": "full", "kind": "management" },
+  { "id": "r14", "text": "Cambia la cena de ayer a almuerzo", "expectedTier": "full", "kind": "management" },
+  { "id": "r15", "text": "Delete the snack I had this morning", "expectedTier": "full", "kind": "management" },
+  { "id": "r16", "text": "Show me what I ate this week", "expectedTier": "full", "kind": "management" },
+  { "id": "r17", "text": "¿Cuántas veces comí pescado esta semana?", "expectedTier": "full", "kind": "management" },
+  { "id": "r18", "text": "Corrige el almuerzo: fueron dos arepas, no una", "expectedTier": "full", "kind": "management" },
+
+  { "id": "r19", "text": "Recomiéndame algo para cenar", "expectedTier": "full", "kind": "recommendation" },
+  { "id": "r20", "text": "Planifica mi semana", "expectedTier": "full", "kind": "recommendation" },
+  { "id": "r21", "text": "What should I eat tonight?", "expectedTier": "full", "kind": "recommendation" },
+  { "id": "r22", "text": "Dame una receta con tomate y atún", "expectedTier": "full", "kind": "recommendation" },
+  { "id": "r23", "text": "¿Qué tal un chocolate caliente para merendar?", "expectedTier": "full", "kind": "recommendation" },
+  { "id": "r24", "text": "Tengo ganas de pasta, ¿qué me sugieres?", "expectedTier": "full", "kind": "recommendation" },
+  { "id": "r25", "text": "Ya desayuné, ¿qué me recomiendas para el almuerzo?", "expectedTier": "full", "kind": "recommendation" },
+  { "id": "r26", "text": "Suggest a dinner for Thursday", "expectedTier": "full", "kind": "recommendation" },
+
+  { "id": "r27", "text": "¿Cómo voy hoy con mis objetivos?", "expectedTier": "full", "kind": "question" },
+  { "id": "r28", "text": "How am I doing with fish this week?", "expectedTier": "full", "kind": "question" },
+  { "id": "r29", "text": "¿Cuánta proteína tiene el pollo?", "expectedTier": "full", "kind": "question" },
+  { "id": "r30", "text": "Hola", "expectedTier": "full", "kind": "question" }
+]

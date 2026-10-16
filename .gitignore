@@ -52,3 +52,7 @@ next-env.d.ts
 
 # ai session logs (contain user ids and prompts)
 logs/
+
+# evals: datasets built from real logs, and run results
+evals/datasets/*.local.json
+evals/results/
