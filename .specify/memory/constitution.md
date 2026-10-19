@@ -17,6 +17,15 @@ Data mutations happen exclusively through Server Actions in `src/actions/`. Clie
 ### V. Consistency Over Cleverness
 The codebase uses one styling system (styled-components), one AI provider abstraction (`src/lib/ai/provider.ts`), one Supabase client pattern (`src/lib/supabase/`), and one dashboard composition pattern (slot props + Suspense). Introducing a second way to do anything requires explicit justification and team agreement.
 
+**Experimental variants** are the one sanctioned exception: a second implementation of an existing behaviour may live beside the first when all of these hold:
+- it has a stated comparison goal (e.g. quality, cost, observability);
+- the active variant is chosen by a flag or user preference, and the current behaviour stays the default;
+- every run is tagged with its variant in telemetry so the comparison can be made;
+- its spec names the decision criteria and plans the retirement of the losing variant.
+
+<!-- Rationale (1.1.0): feature 045-ai-log-v2 runs meal logging v1 and v2 side by side to compare quality and cost before choosing one. -->
+
+
 ## Technical Constraints
 
 - **No Tailwind CSS** — styled-components exclusively; dark-mode first aesthetic
@@ -67,4 +76,4 @@ All code review must verify:
 - Build passes with zero type errors
 - Bilingual support preserved
 
-**Version**: 1.0.0 | **Ratified**: 2026-04-07 | **Last Amended**: 2026-04-07
+**Version**: 1.1.0 | **Ratified**: 2026-04-07 | **Last Amended**: 2026-10-19
