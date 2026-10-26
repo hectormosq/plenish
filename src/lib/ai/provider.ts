@@ -21,6 +21,23 @@ export function getModelName(): string {
   return MODEL_IDS[provider] ?? MODEL_IDS.google;
 }
 
+/**
+ * USD per 1M tokens, used to estimate the cost of each AI pipeline run.
+ * Standard text pricing as published by the providers (checked 2026-10-19 —
+ * re-check the pricing pages when changing models).
+ */
+export const MODEL_PRICES: Record<string, { inputPerM: number; outputPerM: number }> = {
+  'gpt-4o-mini':      { inputPerM: 0.15, outputPerM: 0.6 },
+  'gemini-2.5-flash': { inputPerM: 0.3,  outputPerM: 2.5 },
+};
+
+/** Estimated cost in USD, or null when the model has no price entry. */
+export function estimateCost(model: string, inputTokens: number, outputTokens: number): number | null {
+  const price = MODEL_PRICES[model];
+  if (!price) return null;
+  return (inputTokens * price.inputPerM + outputTokens * price.outputPerM) / 1_000_000;
+}
+
 export function getAIModel(): LanguageModel {
   const provider = process.env.PLENISH_AI_PROVIDER ?? 'google';
 
@@ -268,10 +285,25 @@ export async function getFullSystemPrompt(
   tzOffsetMinutes: number,
   userId: string,
   supabase: SupabaseClient,
+  options: { logTool?: LogTool } = {},
 ): Promise<string> {
   const { dateLine, profile, household } = await loadPromptContext(tzOffsetMinutes, userId, supabase);
-  return buildSystemPrompt(dateLine, profile, household);
+  return buildSystemPrompt(dateLine, profile, household, options.logTool);
 }
+
+export type LogTool = 'log_meal' | 'log_meal_v2';
+
+// Each log tool's instructions in the full prompt. The v2 tool takes only the
+// meal text; the app shows the ingredient table itself.
+const LOG_TOOL_SECTIONS: Record<LogTool, string> = {
+  log_meal: `## log_meal
+- meal_type: infer from the text or the time of day. eaten_at: set only when the user names another day or time.
+- Infer: food_groups, protein_type, servings, has_occasional_food, portion_confidence, inferred_ingredients.
+- After logging: reply with a single short confirmation only (e.g. "✓ Desayuno registrado."). No summaries, no gap analysis, no recommendations unless the user explicitly asks.`,
+  log_meal_v2: `## log_meal_v2
+- Pass only the words that describe the food eaten. The app breaks it into ingredients and shows the user a table.
+- After calling it: do not repeat the table or its values; continue with the rest of the user's request.`,
+};
 
 // ---------------------------------------------------------------------------
 // buildSystemPrompt — injects diet profile values dynamically
@@ -306,7 +338,12 @@ export function formatMealRules(profile: DietProfile): string {
 - Occasional only: ${profile.restrictions.occasional_foods.join(', ')}`;
 }
 
-function buildSystemPrompt(dateLine: string, profile: DietProfile, household: HouseholdContext | null = null): string {
+function buildSystemPrompt(
+  dateLine: string,
+  profile: DietProfile,
+  household: HouseholdContext | null = null,
+  logTool: LogTool = 'log_meal',
+): string {
   const householdSection = household
     ? `# Household
 
@@ -322,7 +359,7 @@ No household — use individual scope for all summaries and recommendations.`;
 
 You are an AI meal tracker and planner. Be concise and practical.
 
-**CRITICAL — LOGGING RULE:** When the user describes food they ate, ALWAYS call log_meal immediately with exactly what they said. Never refuse, question, or ask for more information before logging. Dietary guidelines below are for recommendations only — they are never a reason to block or delay logging.
+**CRITICAL — LOGGING RULE:** When the user describes food they ate, ALWAYS call ${logTool} immediately with exactly what they said. Never refuse, question, or ask for more information before logging. Dietary guidelines below are for recommendations only — they are never a reason to block or delay logging.
 
 Goal: recommend meals that fill nutritional gaps toward daily/weekly targets, based on what the user has eaten and their preferences.
 
@@ -346,10 +383,7 @@ ${formatPortionDefaults(profile.serving_sizes)}
 
 # Tools
 
-## log_meal
-- meal_type: infer from the text or the time of day. eaten_at: set only when the user names another day or time.
-- Infer: food_groups, protein_type, servings, has_occasional_food, portion_confidence, inferred_ingredients.
-- After logging: reply with a single short confirmation only (e.g. "✓ Desayuno registrado."). No summaries, no gap analysis, no recommendations unless the user explicitly asks.
+${LOG_TOOL_SECTIONS[logTool]}
 
 ## get_daily_summary
 For recommendations and compliance. Returns consumed vs targets. Use period="week" for protein rotation and weekly targets.

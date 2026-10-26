@@ -65,3 +65,47 @@ export function createFakeSupabase(household: FakeHousehold | null): SupabaseCli
 
   return { from } as unknown as SupabaseClient;
 }
+
+export interface FakeIngredientRow {
+  meal_log_id: string;
+  dish_key: string;
+  dish_name: string;
+  name: string;
+  quantity_g: number;
+  position: number;
+  created_at: string;
+  meal_logs: { eaten_at: string; nutrition: unknown };
+}
+
+/**
+ * Stand-in for the tables the v2 logging pipeline reads and writes:
+ * ai_pipeline_runs writes are accepted and dropped; meal_log_ingredients
+ * returns the given history rows filtered by dish_key / meal_log_id.
+ */
+export function createLogV2FakeSupabase(history: FakeIngredientRow[] = []): SupabaseClient {
+  const from = (table: string) => {
+    const filters: Record<string, unknown[]> = {};
+    const resolve = () => {
+      if (table !== 'meal_log_ingredients') return { data: table === 'ai_pipeline_runs' ? { id: 'run' } : null, error: null };
+      let rows = history;
+      if (filters.dish_key) rows = rows.filter((r) => filters.dish_key.includes(r.dish_key));
+      if (filters.meal_log_id) rows = rows.filter((r) => filters.meal_log_id.includes(r.meal_log_id));
+      return { data: [...rows].sort((a, b) => b.created_at.localeCompare(a.created_at)), error: null };
+    };
+    const builder = {
+      select: () => builder,
+      insert: () => builder,
+      update: () => builder,
+      eq: () => builder,
+      in: (column: string, values: unknown[]) => { filters[column] = values; return builder; },
+      order: () => builder,
+      limit: () => builder,
+      maybeSingle: async () => resolve(),
+      single: async () => resolve(),
+      then: (onFulfilled: (value: ReturnType<typeof resolve>) => unknown) => Promise.resolve(resolve()).then(onFulfilled),
+    };
+    return builder;
+  };
+  const auth = { getUser: async () => ({ data: { user: { id: EVAL_USER_ID } }, error: null }) };
+  return { from, auth } as unknown as SupabaseClient;
+}

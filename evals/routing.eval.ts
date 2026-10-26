@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { getAIModel, getModelName } from '@/lib/ai/provider';
 import { keywordRoute, routeMessage } from '@/lib/ai/router';
-import type { Intent } from '@/lib/ai/router';
+import type { RouteIntent } from '@/lib/ai/router';
 import { printPassRates, saveResults } from './lib/report';
 import routingCases from './datasets/routing.json';
 
@@ -13,12 +13,14 @@ interface RoutingCase {
   id: string;
   text: string;
   previous?: string;
-  expectedIntent: Intent;
+  /** The previous assistant message showed a v2 meal table waiting for the user. */
+  draftPending?: boolean;
+  expectedIntent: RouteIntent;
 }
 
 const cases = routingCases as RoutingCase[];
 
-function score(name: string, results: { id: string; text: string; expectedIntent: Intent; intent: Intent; reason: string }[]) {
+function score(name: string, results: { id: string; text: string; expectedIntent: RouteIntent; intent: RouteIntent; reason: string }[]) {
   const checked = results.map((r) => ({
     ...r,
     checks: {
@@ -44,7 +46,7 @@ function score(name: string, results: { id: string; text: string; expectedIntent
 
 describe('routing eval', () => {
   it('keyword classifier', () => {
-    const results = cases.map((c) => ({ ...c, ...keywordRoute(c.text) }));
+    const results = cases.map((c) => ({ ...c, ...keywordRoute(c.text, { draftPending: c.draftPending }) }));
     const run = score('Routing — keyword classifier', results);
     console.log(`Results saved to ${saveResults('routing-keyword', run)}`);
     expect(results.length).toBeGreaterThan(0);
@@ -53,7 +55,7 @@ describe('routing eval', () => {
   it.skipIf(process.env.EVAL_SKIP_MODEL === '1')('model router', async () => {
     const model = getAIModel();
     const results = await Promise.all(
-      cases.map(async (c) => ({ ...c, ...(await routeMessage(model, c.text, c.previous)) })),
+      cases.map(async (c) => ({ ...c, ...(await routeMessage(model, c.text, c.previous, { draftPending: c.draftPending })) })),
     );
     const fallbacks = results.filter((r) => r.source === 'keyword').length;
     const run = score(`Routing — model router (${getModelName()})`, results);

@@ -4,13 +4,16 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, isToolUIPart } from 'ai';
-import type { UIMessage } from 'ai';
 import styled, { keyframes } from 'styled-components';
 import type { MealType } from '@/actions/meals';
 import type { HouseholdMemberSimple } from '@/actions/households';
 import { Send, Loader2, X, Pencil } from 'lucide-react';
 import { MemberPickerPopover } from '@/components/specific/MemberPickerPopover';
 import { useSessionLogger } from 'ai-session-logger/next';
+import { MealDraftTable } from '@/components/specific/MealDraftTable';
+import { draftOfPart } from '@/lib/ai/log-v2/draft-parts';
+import { buildReply } from '@/lib/ai/log-v2/reply';
+import type { MealDraft, PlenishUIMessage } from '@/lib/ai/log-v2/schemas';
 
 // ─── Styled Components (from AIChatBox) ────────────────────────────────────
 
@@ -42,8 +45,10 @@ const MessageList = styled.div`
   }
 `;
 
-const MessageBubble = styled.div<{ $role: 'user' | 'assistant' }>`
-  max-width: 80%;
+const MessageBubble = styled.div<{ $role: 'user' | 'assistant'; $wide?: boolean }>`
+  max-width: ${(props) => (props.$wide ? 'min(100%, 32rem)' : '80%')};
+  width: ${(props) => (props.$wide ? '100%' : 'auto')};
+  box-sizing: border-box;
   padding: 1rem;
   border-radius: 12px;
   line-height: 1.5;
@@ -321,7 +326,27 @@ export function MealLogger({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
-  const { messages, status, error, sendMessage } = useChat({ transport: chatTransport });
+  const { messages, status, error, sendMessage, setMessages } = useChat<PlenishUIMessage>({ transport: chatTransport });
+
+  // After a save from the table, write the server's version back into the conversation,
+  // so the next request carries the saved table (the server reads it from the messages).
+  // A direct v2 reply's template text is swapped too, so it no longer asks to save.
+  const replaceTable = (messageIndex: number, next: MealDraft) =>
+    setMessages((prev) => prev.map((m, i) => i !== messageIndex ? m : {
+      ...m,
+      parts: m.parts.map((part) => {
+        if (part.type === 'text' && next.status === 'saved' && m.parts.some((p) => p.type === 'data-meal-draft')) {
+          return { ...part, text: buildReply('saved', next, next.language) };
+        }
+        if (part.type === 'data-meal-draft') return { ...part, data: next };
+        if (part.type === 'tool-log_meal_v2' && part.state === 'output-available') {
+          return { ...part, output: { ...(part.output as object), draft: next } };
+        }
+        return part;
+      }),
+    }));
+  // Only a table in the last assistant message can still be edited or saved.
+  const lastAssistantIndex = useMemo(() => messages.findLastIndex((m) => m.role === 'assistant'), [messages]);
   const isLoading = status === 'streaming' || status === 'submitted';
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
@@ -347,7 +372,8 @@ export function MealLogger({
     prevStatusRef.current = status;
     if ((prev === 'streaming' || prev === 'submitted') && status === 'ready') {
       const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
-      if (lastAssistant?.parts.some(isToolUIPart)) {
+      const savedTable = lastAssistant?.parts.some((p) => draftOfPart(p)?.status === 'saved');
+      if (lastAssistant?.parts.some(isToolUIPart) || savedTable) {
         router.refresh();
       }
     }
@@ -500,14 +526,27 @@ export function MealLogger({
         </MessageBubble>
 
         {/* Chat messages */}
-        {messages.map((m: UIMessage, i: number) => {
+        {messages.map((m: PlenishUIMessage, i: number) => {
           const content = m.parts
             ?.filter((p) => p.type === 'text')
             .map((p) => p.text)
             .join('') ?? '';
+          // v2 meal tables: one per message at most (the last version wins).
+          const tables = m.parts.map(draftOfPart).filter((d): d is MealDraft => d !== null);
+          const table = tables.at(-1);
+          const shown = table ?? null;
+          if (!content && !shown) return null;
           return (
-            <MessageBubble key={m.id ?? i} $role={m.role as 'user' | 'assistant'}>
+            <MessageBubble key={m.id ?? i} $role={m.role as 'user' | 'assistant'} $wide={Boolean(shown)}>
               {content}
+              {shown && (
+                <MealDraftTable
+                  key={`${shown.run_id}-${shown.status}-${shown.meal_id ?? ''}`}
+                  draft={shown}
+                  isLatest={i === lastAssistantIndex && !isLoading}
+                  onChange={(next) => replaceTable(i, next)}
+                />
+              )}
             </MessageBubble>
           );
         })}
