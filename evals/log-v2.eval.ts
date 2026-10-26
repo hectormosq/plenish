@@ -39,6 +39,13 @@ function servingSized(draft: MealDraft | null): boolean {
   return !duplicated && draft.dishes.every((d) => d.ingredients.every((i) => i.quantity_g <= MAX_SERVING_G));
 }
 
+// Flavor-only ingredients that must not reach the table (matched on the first word).
+const SEASONINGS = new Set(['agua', 'sal', 'pimienta', 'especias', 'ajo', 'comino', 'oregano', 'perejil', 'cilantro', 'laurel', 'caldo', 'water', 'salt', 'spices', 'garlic']);
+
+function noSeasonings(draft: MealDraft | null): boolean {
+  return !!draft && draft.dishes.every((d) => d.ingredients.every((i) => !SEASONINGS.has(norm(i.name).split(' ')[0])));
+}
+
 function coverage(draft: MealDraft | null, expected: string[]): number {
   if (!draft || expected.length === 0) return 0;
   const names = draft.dishes.flatMap((d) => d.ingredients.map((i) => norm(i.name)));
@@ -114,6 +121,7 @@ async function runCase(c: DishCase) {
         [`main ingredients ≥ ${COVERAGE_TARGET * 100}%`]: cov >= COVERAGE_TARGET,
         'stated quantities kept':   stated,
         'serving-sized, no dupes':  servingSized(result.draft),
+        'no seasonings':            noSeasonings(result.draft),
         'saved without asking':     result.outcome === 'saved',
       } as Record<string, boolean>,
     };
