@@ -1,7 +1,7 @@
 import { generateText, Output } from 'ai';
 import type { LanguageModel } from 'ai';
 import { z } from 'zod';
-import { resolvePromptTier } from '@/lib/ai/intent-classifier';
+import { LOGGING_SIGNALS, RECOMMENDATION_SIGNALS, resolvePromptTier } from '@/lib/ai/intent-classifier';
 
 // ---------------------------------------------------------------------------
 // Intent router — one small structured-output call that decides which agent
@@ -73,9 +73,17 @@ function normalise(text: string): string {
   return text.toLowerCase().normalize('NFD').replace(/\p{Mn}/gu, '').trim();
 }
 
+// A new meal ("con mi hermano cenamos pizza") or a planning request ("no, mejor
+// planifícame la cena") is not a reply to the table, even if it starts like one.
+// Whole words only (plus "-s" and Spanish enclitics), so "sin tomate" does not match "ate".
+const NEW_REQUEST = new RegExp(
+  `\\b(?:${[...LOGGING_SIGNALS, ...RECOMMENDATION_SIGNALS].map(normalise).join('|')})(?:s|me|te|lo|la|los|las|le|les|nos)?\\b`,
+);
+
 /** Maps the keyword classifier onto intents; used when the router call fails. */
 export function keywordRoute(text: string, options: RouteOptions = {}): RouteDecision {
-  if (options.draftPending && REVISE_KEYWORDS.test(normalise(text))) {
+  const norm = normalise(text);
+  if (options.draftPending && REVISE_KEYWORDS.test(norm) && !NEW_REQUEST.test(norm)) {
     return { intent: 'revise', reason: 'keywords: reply to pending meal', source: 'keyword', usage: NO_USAGE };
   }
   const { intent, signals } = resolvePromptTier(text);

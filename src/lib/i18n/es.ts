@@ -8,6 +8,7 @@ export const es = {
   'logV2.question':           'No conozco bien «{dish}». ¿Qué ingredientes lleva?',
   'logV2.cancelled':          'Vale, no lo registro.',
   'logV2.keptUnchanged':      'Vale, lo dejo como estaba.',
+  'logV2.alreadySaved':       'Ya lo tenía guardado así; no he cambiado nada.',
   'logV2.error':              'No he podido analizar la comida. ¿Lo intentas de nuevo?',
   'logV2.estimatedAlert':     'Cantidades estimadas.',
 

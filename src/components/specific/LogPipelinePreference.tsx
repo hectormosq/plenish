@@ -25,12 +25,12 @@ const ErrorText = styled.p`
 
 interface Props {
   initialValue: LogPipeline;
-  /** Shadow mode is offered only to whitelisted developers. */
-  isDeveloper: boolean;
+  /** Shadow mode is offered only to whitelisted developers, once shadow runs exist. */
+  offerShadow: boolean;
   lang: Lang;
 }
 
-export function LogPipelinePreference({ initialValue, isDeveloper, lang }: Props) {
+export function LogPipelinePreference({ initialValue, offerShadow, lang }: Props) {
   const [value, setValue] = useState<LogPipeline>(initialValue);
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle');
@@ -39,7 +39,7 @@ export function LogPipelinePreference({ initialValue, isDeveloper, lang }: Props
     { value: 'v1', label: t(lang, 'preferences.logPipeline.v1'), description: t(lang, 'preferences.logPipeline.v1.desc') },
     { value: 'v2', label: t(lang, 'preferences.logPipeline.v2'), description: t(lang, 'preferences.logPipeline.v2.desc') },
   ];
-  if (isDeveloper) {
+  if (offerShadow) {
     options.push({ value: 'v2_shadow_v1', label: t(lang, 'preferences.logPipeline.shadow'), description: t(lang, 'preferences.logPipeline.shadow.desc') });
   }
 

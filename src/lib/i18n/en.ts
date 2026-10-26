@@ -9,6 +9,7 @@ export const en: Record<MessageKey, string> = {
   'logV2.question':           "I'm not sure what «{dish}» contains. What are its ingredients?",
   'logV2.cancelled':          "OK, I won't log it.",
   'logV2.keptUnchanged':      "OK, I'll leave it as it was.",
+  'logV2.alreadySaved':       "That's already how I saved it, so nothing changed.",
   'logV2.error':              "I couldn't analyse that meal. Could you try again?",
   'logV2.estimatedAlert':     'Quantities are estimates.',
 

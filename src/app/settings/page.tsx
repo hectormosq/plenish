@@ -7,6 +7,7 @@ import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { getShareDefault, getChatPanelSide, getChatPanelDefaultOpen } from '@/actions/profile';
 import { getPreferences } from '@/actions/preferences';
 import { getUserLang } from '@/lib/i18n/server';
+import { SHADOW_V1_ENABLED } from '@/lib/ai/log-v2/config';
 
 export default async function SettingsPage() {
   const [shareDefault, chatPanelSide, chatPanelDefaultOpen, preferences, lang] = await Promise.all([
@@ -26,7 +27,7 @@ export default async function SettingsPage() {
       />
       <LogPipelinePreference
         initialValue={preferences.effectivePipeline}
-        isDeveloper={preferences.isDeveloper}
+        offerShadow={SHADOW_V1_ENABLED && preferences.isDeveloper}
         lang={lang}
       />
       <Suspense fallback={<SkeletonCard />}>

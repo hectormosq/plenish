@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { SHADOW_V1_ENABLED } from './config';
 
 export type LogPipeline = 'v1' | 'v2' | 'v2_shadow_v1';
 
@@ -11,7 +12,8 @@ export function isLogPipeline(value: unknown): value is LogPipeline {
 /**
  * The pipeline that handles this user's chat logs right now.
  * No preference row → v1. Shadow mode needs a developer whitelist row; without
- * one (e.g. the user was removed from the list) it falls back to v2.
+ * one (e.g. the user was removed from the list), or while shadow runs are not
+ * built (SHADOW_V1_ENABLED), it falls back to v2.
  */
 export async function getEffectivePipeline(supabase: SupabaseClient, userId: string): Promise<LogPipeline> {
   const [prefs, developer] = await Promise.all([
@@ -21,6 +23,6 @@ export async function getEffectivePipeline(supabase: SupabaseClient, userId: str
 
   const stored = prefs.data?.log_pipeline;
   const pipeline: LogPipeline = isLogPipeline(stored) ? stored : 'v1';
-  if (pipeline === 'v2_shadow_v1' && !developer.data) return 'v2';
+  if (pipeline === 'v2_shadow_v1' && (!SHADOW_V1_ENABLED || !developer.data)) return 'v2';
   return pipeline;
 }

@@ -150,7 +150,8 @@ export function MealDraftTable({ draft, isLatest, onChange }: MealDraftTableProp
   const saved = draft.status === 'saved';
   const shown = editing ? work : draft;
   const canAct = isLatest && !pending;
-  const emptyDish = work.dishes.some((d) => d.ingredients.length === 0);
+  // Rows without a name are dropped on save, so a dish needs at least one named row.
+  const emptyDish = work.dishes.some((d) => !d.ingredients.some((i) => i.name.trim()));
 
   const updateRow = (di: number, ii: number, patch: { name?: string; quantity_g?: number }) =>
     setWork((w) => ({

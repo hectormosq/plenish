@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { getEffectivePipeline, isLogPipeline } from '@/lib/ai/log-v2/preferences';
 import type { LogPipeline } from '@/lib/ai/log-v2/preferences';
+import { SHADOW_V1_ENABLED } from '@/lib/ai/log-v2/config';
 
 // Spec: specs/045-ai-log-v2/contracts/server-actions.md. Shown on /settings.
 
@@ -40,6 +41,7 @@ export async function setLogPipeline(
   if (authError || !user) return { ok: false, error: 'unauthorized' };
 
   if (value === 'v2_shadow_v1') {
+    if (!SHADOW_V1_ENABLED) return { ok: false, error: 'invalid' };
     const { data } = await supabase.from('developer_whitelist').select('user_id').eq('user_id', user.id).maybeSingle();
     if (!data) return { ok: false, error: 'shadow_requires_developer' };
   }

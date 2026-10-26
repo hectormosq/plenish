@@ -191,30 +191,38 @@ export async function POST(req: Request) {
         { name: `agent:${turn.agent}`, input_tokens: agentInput, output_tokens: agentOutput, latency_ms: Date.now() - startedAt - routerUsage.latencyMs, summary: { steps: steps.length, first_token_ms: firstTokenMs } },
       ];
 
-      // A v2 user's mixed turn: the log tool already wrote a v2 run; add the agent's usage to it.
-      const v2Run = steps
+      const logCall = steps
         .flatMap((s) => s.toolResults)
-        .find((tr) => tr.toolName === 'log_meal_v2')?.output as { runId?: string; meal_id?: string | null } | undefined;
-      if (v2Run?.runId) {
-        const existing = await getRun(supabase, v2Run.runId);
-        if (existing) {
-          const merged = [...runSteps, ...(existing.steps ?? [])];
-          const sum = totals(merged);
-          await updateRun(supabase, v2Run.runId, {
-            steps: merged,
-            input_tokens: sum.input,
-            output_tokens: sum.output,
-            est_cost_usd: estimateCost(modelName, sum.input, sum.output),
-            latency_ms: Date.now() - startedAt,
-          });
+        .find((tr) => tr.toolName === 'log_meal' || tr.toolName === 'log_meal_v2');
+      // A mixed turn whose agent never logged is not a meal-logging turn.
+      if (runIntent === 'mixed' && !logCall) return;
+
+      // A v2 user's mixed turn: the log tool already wrote the v2 run; add the
+      // agent's usage to it. If that row cannot be read, the usage is dropped
+      // rather than written as a second, incomplete v2 run.
+      if (logCall?.toolName === 'log_meal_v2') {
+        const runId = (logCall.output as { runId?: string } | undefined)?.runId;
+        const existing = runId ? await getRun(supabase, runId) : null;
+        if (!runId || !existing) {
+          console.warn('Could not add the mixed agent usage to its v2 run.');
           return;
         }
+        const merged = [...runSteps, ...(existing.steps ?? [])];
+        const sum = totals(merged);
+        await updateRun(supabase, runId, {
+          steps: merged,
+          input_tokens: sum.input,
+          output_tokens: sum.output,
+          est_cost_usd: estimateCost(modelName, sum.input, sum.output),
+          latency_ms: Date.now() - startedAt,
+        });
+        return;
       }
 
       await insertRun(supabase, {
         correlation_id: correlationId,
-        // A v2 user's mixed turn runs the v2 pipeline through its log tool.
-        variant:        pipeline !== 'v1' && runIntent === 'mixed' ? 'v2' : 'v1',
+        // v2 runs are written by the pipeline itself; only v1 turns get here.
+        variant:        'v1',
         intent:         runIntent,
         meal_log_id:    savedMeal?.meal_id ?? null,
         model:          modelName,

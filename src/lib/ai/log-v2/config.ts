@@ -11,3 +11,9 @@ export const MAX_INGREDIENTS_PER_DISH = 40;
 
 /** Used when the model returns a missing or non-positive quantity. */
 export const DEFAULT_QUANTITY_G = 100;
+
+/**
+ * Shadow v1 runs (T049/T050) are not built yet. Until they are, the
+ * 'v2_shadow_v1' preference is not offered and behaves as 'v2'.
+ */
+export const SHADOW_V1_ENABLED = false;

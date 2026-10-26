@@ -106,7 +106,7 @@ Shadow is **not** run for `mixed`, `manage`, `plan`, `chat` or form logs: those 
 - Every node returns its `usage` (from `generateText`); the pipeline sums them and keeps a per-step list for `ai_pipeline_runs.steps`.
 - `routeMessage` is extended to return its usage so both v1 and v2 runs include the router cost.
 - v1 runs (non-shadow) are recorded from `streamText`'s `onFinish` (`totalUsage`).
-- Runs are recorded only for meal-logging turns (`log`, `mixed`, form). `variant` is the user's effective pipeline (`v1`, or `v2` for a v2 user's `mixed` turn). Manage, plan and chat turns are not recorded.
+- Runs are recorded only for meal-logging turns (`log`, `mixed`, form). A `mixed` turn counts only when its agent called a log tool. A v2 user's `mixed` turn adds the agent's usage to the run `log_meal_v2` wrote (`variant 'v2'`); if that run cannot be read, the usage is dropped rather than written as a second run. Manage, plan and chat turns are not recorded.
 - **Latency** is measured the same way for every variant: request start → full reply ready (shadow: from shadow start). v1 also stores `first_token_ms` in its agent step `summary`, because it streams and v2 does not.
 
 **Rationale**: Comparable numbers for both variants from the same source.

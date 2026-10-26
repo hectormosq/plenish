@@ -41,10 +41,9 @@ export async function handleReviseTurn(
   if (action === 'edit') {
     await record();
     // Nothing is written yet: a pending table stays pending, a saved meal gets changes_pending.
-    return {
-      reply: saved && next.changes_pending ? t(lang, 'logV2.confirmChanges') : buildReply('draft', next, lang),
-      draft: next,
-    };
+    if (!saved) return { reply: buildReply('draft', next, lang), draft: next };
+    // A correction that matches what is stored leaves the saved meal as it is.
+    return { reply: t(lang, next.changes_pending ? 'logV2.confirmChanges' : 'logV2.alreadySaved'), draft: next };
   }
 
   // confirm
