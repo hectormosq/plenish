@@ -22,11 +22,15 @@ The migrations in `supabase/migrations/` are the source of truth. `docs/database
 | Table | Purpose |
 |-------|---------|
 | `public.users` | Public profile mirroring `auth.users` (trigger-synced) |
-| `public.meal_logs` | Meals eaten: `log_text`, `meal_type`, `eaten_at`, `nutrition` (jsonb), `inferred_ingredients`, `recipe_ids`, `is_shared`, `household_id` |
+| `public.meal_logs` | Meals eaten: `log_text`, `meal_type`, `eaten_at`, `nutrition` (jsonb), `inferred_ingredients`, `recipe_ids`, `is_shared`, `household_id`, `log_pipeline`, `is_estimated`, `ai_run_id` |
 | `public.recipes` | User recipes (`user_id IS NULL` = global); `embedding vector(1536)` exists but is not populated |
 | `public.planned_meals` | AI-recommended slots: `planned_date`, `meal_type`, `status` (planned, accepted, dismissed, overridden, expired) |
 | `public.user_diet_profiles` | Per-user targets, restrictions and serving sizes (jsonb) |
 | `public.households`, `public.household_members` | Household groups, membership and invitations |
 | `public.meal_participants` | Co-eaters of a shared meal, with per-user `dismissed` |
+| `public.meal_log_ingredients` | Ingredient rows of v2 meals: dish, grams, quantity source, confidence |
+| `public.user_preferences` | Per-user preferences: `log_pipeline` (v1, v2, v2_shadow_v1) |
+| `public.developer_whitelist` | Accounts allowed to use developer tools; team-managed, no write policies |
+| `public.ai_pipeline_runs` | Per-run telemetry for v1/v2 logging: tokens, cost, latency, outcome |
 
 `public.weekly_plan` and `public.plan_meals` exist in the schema but no code uses them; `planned_meals` replaced them.

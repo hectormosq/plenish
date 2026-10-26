@@ -38,5 +38,18 @@
 
   { "id": "r33", "text": "sí", "previous": "✓ Cena registrada. ¿Quieres guardar los ingredientes como receta?", "expectedIntent": "manage" },
   { "id": "r34", "text": "sí, adelante", "previous": "Puedo planificar el resto de tu semana. ¿Quieres que lo haga?", "expectedIntent": "plan" },
-  { "id": "r35", "text": "sí, bórralo", "previous": "Encontré: Desayuno de hoy — tostadas con huevo. ¿Lo elimino?", "expectedIntent": "manage" }
+  { "id": "r35", "text": "sí, bórralo", "previous": "Encontré: Desayuno de hoy — tostadas con huevo. ¿Lo elimino?", "expectedIntent": "manage" },
+  { "id": "r36", "text": "sí", "previous": "Esto es lo que voy a registrar. ¿Lo guardo o quieres cambiar algo? [Arepa catira: harina de maíz 120 g, pollo mechado 60 g, queso 40 g]", "draftPending": true, "expectedIntent": "revise" },
+  { "id": "r37", "text": "sin queso", "previous": "Esto es lo que voy a registrar. ¿Lo guardo o quieres cambiar algo? [Arepa catira: harina de maíz 120 g, pollo mechado 60 g, queso 40 g]", "draftPending": true, "expectedIntent": "revise" },
+  { "id": "r38", "text": "eran 200 g de pollo", "previous": "Esto es lo que voy a registrar. ¿Lo guardo o quieres cambiar algo? [Arepa catira: harina de maíz 120 g, pollo mechado 60 g, queso 40 g]", "draftPending": true, "expectedIntent": "revise" },
+  { "id": "r39", "text": "no lo guardes", "previous": "Esto es lo que voy a registrar. ¿Lo guardo o quieres cambiar algo? [Arepa catira: harina de maíz 120 g, pollo mechado 60 g, queso 40 g]", "draftPending": true, "expectedIntent": "revise" },
+  { "id": "r40", "text": "añade aguacate", "previous": "He registrado tu almuerzo con estos valores: [Arepa catira: harina de maíz 120 g, pollo mechado 60 g, queso 40 g]", "draftPending": true, "expectedIntent": "revise" },
+  { "id": "r41", "text": "¿Qué ceno hoy?", "previous": "He registrado tu almuerzo con estos valores: [Arepa catira: harina de maíz 120 g, pollo mechado 60 g, queso 40 g]", "draftPending": true, "expectedIntent": "plan" },
+  { "id": "r42", "text": "Y de postre me comí un flan", "previous": "He registrado tu almuerzo con estos valores: [Arepa catira: harina de maíz 120 g, pollo mechado 60 g, queso 40 g]", "draftPending": true, "expectedIntent": "log" },
+  { "id": "r43", "text": "sin queso", "previous": "✓ Cena registrada.", "expectedIntent": "manage" },
+  { "id": "r44", "text": "cené arepa catira", "previous": "He registrado tu almuerzo con estos valores: [Arepa catira: harina de maíz 120 g, pollo mechado 60 g, queso 40 g]", "draftPending": true, "expectedIntent": "log" },
+  { "id": "r45", "text": "hoy desayuné otra vez arepa catira", "previous": "Esto es lo que voy a registrar. ¿Lo guardo o quieres cambiar algo? [Arepa catira: harina de maíz 120 g, pollo mechado 60 g, queso 40 g]", "draftPending": true, "expectedIntent": "log" },
+  { "id": "r46", "text": "I had arepa catira for dinner", "previous": "I've logged your lunch with these values: [Arepa catira: corn flour 120 g, shredded chicken 60 g, cheese 40 g]", "draftPending": true, "expectedIntent": "log" },
+  { "id": "r47", "text": "comí un xyzzy de la abuela", "previous": "Vale, no lo registro.", "expectedIntent": "log" },
+  { "id": "r48", "text": "cené un zorblax casero con ensalada", "expectedIntent": "log" }
 ]

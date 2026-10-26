@@ -59,7 +59,7 @@ Request body: unchanged (`messages`, `tzOffset`, `sessionId`, `logContext`).
 Per request:
 1. Auth → `getEffectivePipeline`.
 2. `correlationId = crypto.randomUUID()`.
-3. Form log → v1 form agent (unchanged); run recorded with `intent 'form'`.
+3. Form log (meal type picked in the input) → no router. pipeline = v1: v1 form agent (unchanged). pipeline ≠ v1: `runLogPipelineV2` with `logContext`. Either way the run is recorded with `intent 'form'`.
 4. `routeMessage(model, text, previous, { draftPending })` (now also returns `usage`). `draftPending` is true only when pipeline ≠ v1 and the last assistant message has an actionable `data-meal-draft` / `tool-log_meal_v2` output; then the router may return `revise`.
 5. intent = `revise` → `revise` node → `confirm` (pending: save; saved with `changes_pending`: `updateMealIngredients`) / `edit` (new draft; for a saved meal `changes_pending: true` + `logV2.confirmChanges`) / `cancel`. Usage is added to the original run.
 6. pipeline = v1 → existing `buildChatTurn(..., route)` + `streamText`; for `log` / `mixed`, `onFinish` writes an `ai_pipeline_runs` row (`variant = 'v1'`). Other intents write no run.

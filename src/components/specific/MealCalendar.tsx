@@ -2,6 +2,7 @@ import React from 'react';
 import { getCalendarMeals } from '@/actions/calendar';
 import { getPlannedMeals } from '@/actions/plans';
 import { MealWeekGrid } from '@/components/ui/MealWeekGrid';
+import { getUserLang } from '@/lib/i18n/server';
 
 const INITIAL_DAYS_BACK = 35; // covers current week + 4 full weeks of history
 const PLANNED_WEEKS_AHEAD = 8; // fetch up to 8 weeks of planned meals
@@ -16,12 +17,13 @@ export async function MealCalendar() {
     .toISOString()
     .split('T')[0];
 
-  const [meals, plannedMeals] = await Promise.all([
+  const [meals, plannedMeals, lang] = await Promise.all([
     getCalendarMeals(INITIAL_DAYS_BACK),
     getPlannedMeals(today, weeksAhead),
+    getUserLang(),
   ]);
 
   return (
-    <MealWeekGrid meals={meals} daysBack={INITIAL_DAYS_BACK} plannedMeals={plannedMeals} />
+    <MealWeekGrid meals={meals} daysBack={INITIAL_DAYS_BACK} plannedMeals={plannedMeals} lang={lang} />
   );
 }

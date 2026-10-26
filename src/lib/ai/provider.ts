@@ -21,6 +21,23 @@ export function getModelName(): string {
   return MODEL_IDS[provider] ?? MODEL_IDS.google;
 }
 
+/**
+ * USD per 1M tokens, used to estimate the cost of each AI pipeline run.
+ * Standard text pricing as published by the providers (checked 2026-10-19 —
+ * re-check the pricing pages when changing models).
+ */
+export const MODEL_PRICES: Record<string, { inputPerM: number; outputPerM: number }> = {
+  'gpt-4o-mini':      { inputPerM: 0.15, outputPerM: 0.6 },
+  'gemini-2.5-flash': { inputPerM: 0.3,  outputPerM: 2.5 },
+};
+
+/** Estimated cost in USD, or null when the model has no price entry. */
+export function estimateCost(model: string, inputTokens: number, outputTokens: number): number | null {
+  const price = MODEL_PRICES[model];
+  if (!price) return null;
+  return (inputTokens * price.inputPerM + outputTokens * price.outputPerM) / 1_000_000;
+}
+
 export function getAIModel(): LanguageModel {
   const provider = process.env.PLENISH_AI_PROVIDER ?? 'google';
 
@@ -268,9 +285,24 @@ export async function getFullSystemPrompt(
   tzOffsetMinutes: number,
   userId: string,
   supabase: SupabaseClient,
+  options: { logTool?: 'log_meal' | 'log_meal_v2' } = {},
 ): Promise<string> {
   const { dateLine, profile, household } = await loadPromptContext(tzOffsetMinutes, userId, supabase);
-  return buildSystemPrompt(dateLine, profile, household);
+  const prompt = buildSystemPrompt(dateLine, profile, household);
+  return options.logTool === 'log_meal_v2' ? withLogMealV2Section(prompt) : prompt;
+}
+
+// The v2 log tool takes only the meal text; the app shows the ingredient table itself.
+const LOG_MEAL_SECTION = /## log_meal\n[\s\S]*?(?=\n## )/;
+const LOG_MEAL_V2_SECTION = `## log_meal_v2
+- Pass only the words that describe the food eaten. The app breaks it into ingredients and shows the user a table.
+- After calling it: do not repeat the table or its values; continue with the rest of the user's request.
+`;
+
+function withLogMealV2Section(prompt: string): string {
+  return prompt
+    .replace(LOG_MEAL_SECTION, LOG_MEAL_V2_SECTION)
+    .replace('ALWAYS call log_meal immediately', 'ALWAYS call log_meal_v2 immediately');
 }
 
 // ---------------------------------------------------------------------------

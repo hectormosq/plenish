@@ -8,6 +8,8 @@ Plenish is an AI-powered meal tracking and recommendation web application. Its p
    - Users can register daily meals (Breakfast, Lunch, Dinner, Snacks).
    - Easy input via natural language (leveraging Vercel AI) or structured forms.
    - Record ingredients, portions, or simply the dish name and a description.
+   - **Ingredient-level logging (v2, feature 045, opt-in):** a vague chat message ("arepa catira") is broken into dishes and ingredients with estimated grams. When the assistant is confident it saves the meal and shows a summary table; otherwise it shows the table and asks the user to confirm or edit it (in the chat or directly in the table). Dishes logged before are reused. Quantities are marked as estimates. Energy and macronutrients are not estimated yet.
+   - Users choose the chat logging pipeline (v1 classic, v2 by ingredient) on the Preferences page; whitelisted developers can also run v2 with v1 in shadow mode to compare cost and quality.
 
 2. **Meal Recommendations (Agentic AI)**
    - Generate automated weekly meal plans based on previously eaten meals and saved preferences.

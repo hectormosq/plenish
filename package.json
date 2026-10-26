@@ -10,6 +10,7 @@
     "build": "npm run build --workspace=packages/ai-session-logger && next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run --config vitest.config.ts",
     "eval": "vitest run --config evals/vitest.config.ts",
     "eval:routing": "vitest run --config evals/vitest.config.ts routing",
     "eval:dataset": "node evals/build-dataset.mjs"

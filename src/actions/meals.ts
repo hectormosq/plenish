@@ -16,6 +16,8 @@ export interface MealLog {
   nutrition: MealNutrition | null;
   /** Temporary ingredient strings for unlinked meals. Cleared when a recipe is linked. */
   inferred_ingredients: string[] | null;
+  /** v2 meal: quantities are estimates. */
+  is_estimated?: boolean;
   /** True when this meal was logged as shared with household members. */
   is_shared: boolean;
   /** The household this shared meal belongs to. Null for individual meals. */

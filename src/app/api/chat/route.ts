@@ -1,22 +1,54 @@
-import { streamText, convertToModelMessages, isTextUIPart } from 'ai';
+import {
+  streamText,
+  convertToModelMessages,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  isTextUIPart,
+} from 'ai';
 import type { UIMessage } from 'ai';
-import { getAIModel, getModelName } from '@/lib/ai/provider';
+import { estimateCost, getAIModel, getModelName } from '@/lib/ai/provider';
 import { buildChatTurn, turnLoopSettings } from '@/lib/ai/chat-turn';
-import { parseLogContext } from '@/lib/ai/log-context';
+import { isFormLog, parseLogContext } from '@/lib/ai/log-context';
+import { routeMessage } from '@/lib/ai/router';
+import { getRun, insertRun, updateRun } from '@/lib/ai/runs';
+import type { RunStep } from '@/lib/ai/runs';
+import { getEffectivePipeline } from '@/lib/ai/log-v2/preferences';
+import { runLogPipelineV2, totals } from '@/lib/ai/log-v2/pipeline';
+import type { MealDraft, PlenishUIMessage } from '@/lib/ai/log-v2/schemas';
+import { latestDraftIn } from '@/lib/ai/log-v2/draft-parts';
+import { describeDraft } from '@/lib/ai/log-v2/reply';
+import { handleReviseTurn } from '@/lib/ai/log-v2/revise-turn';
 import { createClient } from '@/lib/supabase/server';
 import { createServerWriter } from 'ai-session-logger/next/server';
 
 export const runtime = 'nodejs';
 
+/** A v2 reply: the template text, then the meal table (when there is one). */
+function draftResponse(reply: string, draft: MealDraft | null): Response {
+  const stream = createUIMessageStream<PlenishUIMessage>({
+    execute: ({ writer }) => {
+      const id = crypto.randomUUID();
+      writer.write({ type: 'text-start', id });
+      writer.write({ type: 'text-delta', id, delta: reply });
+      writer.write({ type: 'text-end', id });
+      // The run id keeps the part id stable, so a later version replaces it.
+      if (draft) writer.write({ type: 'data-meal-draft', id: draft.run_id, data: draft });
+    },
+  });
+  return createUIMessageStreamResponse({ stream });
+}
+
 export async function POST(req: Request) {
+  const startedAt = Date.now();
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) return new Response('Unauthorized', { status: 401 });
 
   const { messages, tzOffset, sessionId, logContext: rawLogContext } = await req.json();
   const tz = Number.isFinite(tzOffset) ? tzOffset : 0;
+  const correlationId = crypto.randomUUID();
 
-  // ── Turn setup: agent, prompt, tools and step limits ──────────────────────
+  // ── Turn setup: pipeline, route, agent, prompt, tools and step limits ─────
   const rawMessages  = (messages ?? []) as UIMessage[];
   const lastUserIdx  = rawMessages.findLastIndex((m) => m.role === 'user');
   const lastUserMsg  = rawMessages[lastUserIdx];
@@ -24,24 +56,74 @@ export async function POST(req: Request) {
   const textOf = (m?: UIMessage) => (m?.parts ?? []).filter(isTextUIPart).map((p) => p.text).join('\n');
 
   const model = getAIModel();
-  const turn = await buildChatTurn({
-    model,
-    lastUserText:          textOf(lastUserMsg),
-    previousAssistantText: textOf(prevAssistant),
-    logContext:            parseLogContext(rawLogContext),
-    tzOffsetMinutes: tz,
-    userId:          user.id,
-    supabase,
-    sessionId,
-  });
+  const modelName = getModelName();
+  const logContext = parseLogContext(rawLogContext);
+  const lastUserText = textOf(lastUserMsg);
+  const previousAssistantText = textOf(prevAssistant);
+  const pipeline = await getEffectivePipeline(supabase, user.id);
 
-  // ── Session telemetry ─────────────────────────────────────────────────────
+  // Form logs skip the router; everything else is routed exactly once.
+  const formLog = isFormLog(logContext);
+  // A meal table in the previous assistant message makes the internal 'revise' intent available (v2 only).
+  const pendingDraft = !formLog && pipeline !== 'v1' ? latestDraftIn(prevAssistant) : null;
+  const routerPrevious = pendingDraft ? `${previousAssistantText}\n${describeDraft(pendingDraft)}` : previousAssistantText;
+  const route = formLog
+    ? null
+    : await routeMessage(model, lastUserText, routerPrevious, { draftPending: pendingDraft !== null });
+  const nodeContext = { model, supabase, userId: user.id, tzOffsetMinutes: tz, now: new Date() };
+
   const writer = sessionId
     ? createServerWriter({ sessionId, userId: user.id, app: 'plenish' })
     : null;
 
+  // ── v2: a reply to the meal table (confirm, correct, cancel) ──────────────
+  if (route?.intent === 'revise' && pendingDraft) {
+    writer?.promptSent({
+      model: modelName,
+      prompt: 'log-v2 revise',
+      context: { agent: 'log-v2:revise', routeSource: route.source, routeReason: route.reason, pipeline, correlationId },
+    });
+    const result = await handleReviseTurn(pendingDraft, lastUserText, route.usage, nodeContext);
+    writer?.aiResponse({ text: result.reply });
+    return draftResponse(result.reply, result.draft);
+  }
+  // 'revise' is only offered with a table; if it slips through, treat the message as a log.
+  if (route?.intent === 'revise') route.intent = 'log';
+
+  // ── v2: a meal report goes straight to the logging pipeline (no agent) ────
+  // Form logs (a meal type picked in the input) take the same path, without the router.
+  if (pipeline !== 'v1' && (formLog || route?.intent === 'log')) {
+    writer?.promptSent({
+      model: modelName,
+      prompt: 'log-v2 pipeline',
+      context: { agent: 'log-v2', routeSource: route?.source ?? 'form', routeReason: route?.reason ?? null, pipeline, correlationId },
+    });
+    const result = await runLogPipelineV2(
+      { text: lastUserText, previousAssistantText, correlationId, intent: formLog ? 'form' : 'log', routerUsage: route?.usage, logContext, startedAt },
+      nodeContext,
+    );
+    writer?.aiResponse({ text: result.reply });
+    return draftResponse(result.reply, result.draft);
+  }
+
+  const turn = await buildChatTurn({
+    model,
+    lastUserText,
+    previousAssistantText,
+    logContext,
+    tzOffsetMinutes: tz,
+    userId:          user.id,
+    supabase,
+    sessionId,
+    route:           route ?? undefined,
+    logPipeline:     pipeline,
+    correlationId,
+    startedAt,
+  });
+
+  // ── Session telemetry ─────────────────────────────────────────────────────
   writer?.promptSent({
-    model: getModelName(),
+    model: modelName,
     prompt: turn.system,
     tokensEst: Math.ceil((turn.system.length + JSON.stringify(messages).length) / 4),
     context: {
@@ -49,11 +131,17 @@ export async function POST(req: Request) {
       agent:        turn.agent,
       routeSource:  turn.route?.source ?? 'form',
       routeReason:  turn.route?.reason ?? null,
+      pipeline,
+      correlationId,
     },
   });
 
+  // Only meal-logging turns are recorded as pipeline runs (research R7).
+  const runIntent = formLog ? 'form' : turn.agent === 'log' || turn.agent === 'mixed' ? turn.agent : null;
+
   // ── Streaming ─────────────────────────────────────────────────────────────
   const converted = await convertToModelMessages(messages);
+  let firstTokenMs: number | null = null;
 
   const result = streamText({
     model,
@@ -61,6 +149,9 @@ export async function POST(req: Request) {
     messages: converted,
     tools:    turn.tools,
     ...turnLoopSettings(turn),
+    onChunk: () => {
+      firstTokenMs ??= Date.now() - startedAt;
+    },
     onStepFinish: ({ text, toolCalls, toolResults, usage }) => {
       for (const tc of toolCalls) {
         writer?.toolCall(tc.toolName, tc.input as Record<string, unknown>);
@@ -77,11 +168,63 @@ export async function POST(req: Request) {
         });
       }
     },
-    onFinish: ({ finishReason, steps }) => {
+    onFinish: async ({ finishReason, steps, totalUsage }) => {
       // Stopped by the step limit while still calling tools: the agent did not finish its job.
       if (finishReason === 'tool-calls') {
         console.warn(`Chat turn hit the step limit (agent=${turn.agent}, steps=${steps.length}).`);
       }
+      if (!runIntent) return;
+
+      const routerUsage = route?.usage ?? { inputTokens: 0, outputTokens: 0, latencyMs: 0 };
+      const agentInput  = totalUsage.inputTokens ?? 0;
+      const agentOutput = totalUsage.outputTokens ?? 0;
+      const inputTokens  = routerUsage.inputTokens + agentInput;
+      const outputTokens = routerUsage.outputTokens + agentOutput;
+
+      const savedMeal = steps
+        .flatMap((s) => s.toolResults)
+        .map((tr) => tr.output as { success?: boolean; meal_id?: string } | undefined)
+        .find((out) => out?.success && out.meal_id);
+
+      const runSteps: RunStep[] = [
+        ...(route ? [{ name: 'router', input_tokens: routerUsage.inputTokens, output_tokens: routerUsage.outputTokens, latency_ms: routerUsage.latencyMs, summary: { intent: route.intent, source: route.source } }] : []),
+        { name: `agent:${turn.agent}`, input_tokens: agentInput, output_tokens: agentOutput, latency_ms: Date.now() - startedAt - routerUsage.latencyMs, summary: { steps: steps.length, first_token_ms: firstTokenMs } },
+      ];
+
+      // A v2 user's mixed turn: the log tool already wrote a v2 run; add the agent's usage to it.
+      const v2Run = steps
+        .flatMap((s) => s.toolResults)
+        .find((tr) => tr.toolName === 'log_meal_v2')?.output as { runId?: string; meal_id?: string | null } | undefined;
+      if (v2Run?.runId) {
+        const existing = await getRun(supabase, v2Run.runId);
+        if (existing) {
+          const merged = [...runSteps, ...(existing.steps ?? [])];
+          const sum = totals(merged);
+          await updateRun(supabase, v2Run.runId, {
+            steps: merged,
+            input_tokens: sum.input,
+            output_tokens: sum.output,
+            est_cost_usd: estimateCost(modelName, sum.input, sum.output),
+            latency_ms: Date.now() - startedAt,
+          });
+          return;
+        }
+      }
+
+      await insertRun(supabase, {
+        correlation_id: correlationId,
+        // A v2 user's mixed turn runs the v2 pipeline through its log tool.
+        variant:        pipeline !== 'v1' && runIntent === 'mixed' ? 'v2' : 'v1',
+        intent:         runIntent,
+        meal_log_id:    savedMeal?.meal_id ?? null,
+        model:          modelName,
+        input_tokens:   inputTokens,
+        output_tokens:  outputTokens,
+        est_cost_usd:   estimateCost(modelName, inputTokens, outputTokens),
+        latency_ms:     Date.now() - startedAt,
+        steps:          runSteps,
+        outcome:        savedMeal ? 'saved' : null,
+      });
     },
   });
 

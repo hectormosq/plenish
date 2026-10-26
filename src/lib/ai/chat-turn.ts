@@ -9,7 +9,9 @@ import { isFormLog } from '@/lib/ai/log-context';
 import type { LogContext } from '@/lib/ai/log-context';
 import { createMealTools } from '@/lib/ai/tools/meal-tools';
 import type { SaveMealLog } from '@/lib/ai/tools/meal-tools';
+import type { LogPipeline } from '@/lib/ai/log-v2/preferences';
 import { createPlanMealsTool } from '@/lib/ai/tools/plan-tools';
+import { createLogMealV2Tool } from '@/lib/ai/tools/log-v2-tool';
 
 export interface ChatTurnInput {
   model: LanguageModel;
@@ -24,6 +26,14 @@ export interface ChatTurnInput {
   sessionId?: string;
   /** Replaces the meal write — used by the evals. */
   saveMealLog?: SaveMealLog;
+  /** Route already decided by the caller; skips the router call. */
+  route?: RouteDecision;
+  /** Chat logging pipeline of the user. Defaults to v1. */
+  logPipeline?: LogPipeline;
+  /** Shared id of the runs on this message (v2 telemetry). */
+  correlationId?: string;
+  /** Request start, for end-to-end latency (v2 telemetry). */
+  startedAt?: number;
 }
 
 /** Which agent handles the turn: a routed intent, or 'form' for the logging form. */
@@ -71,10 +81,13 @@ export async function buildChatTurn(input: ChatTurnInput): Promise<ChatTurn> {
     };
   }
 
-  const route = await routeMessage(model, lastUserText, input.previousAssistantText);
-  const base = { agent: route.intent, route, maxSteps: MAX_STEPS[route.intent] };
+  const route = input.route ?? await routeMessage(model, lastUserText, input.previousAssistantText);
+  // 'revise' answers a v2 meal table and is handled by the chat route before any agent runs.
+  if (route.intent === 'revise') throw new Error('The revise intent has no agent; handle it before buildChatTurn.');
+  const intent = route.intent;
+  const base = { agent: intent, route, maxSteps: MAX_STEPS[intent] };
 
-  switch (route.intent) {
+  switch (intent) {
     case 'log':
       return {
         ...base,
@@ -107,14 +120,27 @@ export async function buildChatTurn(input: ChatTurnInput): Promise<ChatTurn> {
     case 'chat':
       return { ...base, system: getChatSystemPrompt(tz), tools: {} };
 
-    case 'mixed':
+    case 'mixed': {
       // One message doing two things: the general agent with every tool.
+      // v2 users log through the v2 pipeline; nothing else changes.
+      const v2 = (input.logPipeline ?? 'v1') !== 'v1';
+      const logTool: ToolSet = v2
+        ? {
+            log_meal_v2: createLogMealV2Tool({
+              model,
+              tzOffsetMinutes: tz,
+              correlationId: input.correlationId ?? crypto.randomUUID(),
+              startedAt: input.startedAt ?? Date.now(),
+              logContext,
+            }),
+          }
+        : { log_meal: meal.logMealTool };
       return {
         ...base,
-        system: await getFullSystemPrompt(tz, userId, supabase),
+        system: await getFullSystemPrompt(tz, userId, supabase, { logTool: v2 ? 'log_meal_v2' : 'log_meal' }),
         tools: {
           get_meals:         meal.getMealsTool,
-          log_meal:          meal.logMealTool,
+          ...logTool,
           save_recipe:       meal.saveRecipeTool,
           delete_meal:       meal.deleteMealTool,
           update_meal:       meal.updateMealTool,
@@ -122,6 +148,7 @@ export async function buildChatTurn(input: ChatTurnInput): Promise<ChatTurn> {
           plan_meals:        createPlanMealsTool(sessionId),
         },
       };
+    }
   }
 }
 

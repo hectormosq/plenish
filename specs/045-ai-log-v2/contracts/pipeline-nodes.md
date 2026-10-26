@@ -54,7 +54,7 @@ export async function runLogPipelineV2(
 }>;
 ```
 
-Order: `parse → history → (ingredients ∥ per unmatched dish) → portions → nutrition → gate → save | draft | question`. Every node's `StepUsage` is collected; the orchestrator writes one `ai_pipeline_runs` row (variant `v2`) and, on `save`, the meal via `saveMealV2`.
+Order (as implemented): `parse → history → (ingredients ∥ per unmatched dish) → portions → gate → nutrition → save | draft`. The gate runs **before** `nutrition` so a meal that ends in a question does not pay for a nutrition call; `question` returns right after the gate. Every node's `StepUsage` is collected; the orchestrator writes one `ai_pipeline_runs` row (variant `v2`) and, on `save`, the meal via `saveMealV2`.
 
 ## Model-facing schemas
 

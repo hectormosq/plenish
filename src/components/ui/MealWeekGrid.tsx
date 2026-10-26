@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import { deleteMeal, dismissSharedMeal, type MealType } from '@/actions/meals';
 import { getCalendarMeals } from '@/actions/calendar';
+import { Alert } from '@/components/ui/Alert';
+import { t } from '@/lib/i18n';
+import type { Lang } from '@/lib/i18n';
 import {
   planSingleSlot,
   planWeekSlots,
@@ -40,6 +43,8 @@ export interface CalendarMeal {
   meal_type: MealType;
   eaten_at: string;
   is_shared: boolean;
+  /** v2 meal: quantities are estimates. */
+  is_estimated?: boolean;
   isOwn: boolean;
   meal_participants?: Array<{ user_id: string; dismissed: boolean }>;
 }
@@ -437,6 +442,14 @@ const PlanActionBtn = styled.button<{ $variant: 'accept' | 'regen' | 'dismiss' }
   }
 `;
 
+// Marks a v2 meal whose quantities are estimates; the text is in the title and the tooltip.
+const EstimatedMark = styled.span`
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fcd34d;
+  line-height: 1;
+`;
+
 const CellFooter = styled.div`
   display: flex;
   align-items: center;
@@ -709,10 +722,12 @@ export function MealWeekGrid({
   meals: initialMeals,
   daysBack: initialDaysBack = 35,
   plannedMeals: initialPlannedMeals = [],
+  lang = 'es',
 }: {
   meals: CalendarMeal[];
   daysBack?: number;
   plannedMeals?: PlannedMeal[];
+  lang?: Lang;
 }) {
   const router = useRouter();
   const { session } = useSessionLogger();
@@ -1042,6 +1057,9 @@ export function MealWeekGrid({
                             👥{coEaters.length > 0 ? ` ${coEaters.length}` : ''}
                           </CoEaterLabel>
                         )}
+                        {primary.is_estimated && (
+                          <EstimatedMark title={t(lang, 'logV2.estimatedAlert')} aria-label={t(lang, 'logV2.estimatedAlert')}>≈</EstimatedMark>
+                        )}
                         {slot.length > 1 && <ExtraCount>+{slot.length - 1}</ExtraCount>}
                       </CellFooter>
                     </CellBody>
@@ -1245,6 +1263,7 @@ export function MealWeekGrid({
               </span>
             )}
           </TipMeta>
+          {tooltip.meal.is_estimated && <Alert tone="warning" compact>{t(lang, 'logV2.estimatedAlert')}</Alert>}
           <TipActions>
             {tooltip.meal.isOwn ? (
               <TipButton

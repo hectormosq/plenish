@@ -43,6 +43,8 @@ export const MealDraft = z.object({
   log_text:     z.string().min(1).max(500),
   meal_type:    z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
   eaten_at:     z.iso.datetime(),
+  is_shared:    z.boolean().default(false),     // from the parse node ("comimos", "cenamos"); added during implementation
+  co_eater_ids: z.array(z.uuid()).max(20).nullable().default(null), // co-eaters picked in the input; null = whole household. Filtered to real members on save
   dishes:       z.array(DraftDish).min(1).max(10),
   meal_level:   ConfidenceLevel,                 // recomputed on the server
   nutrition:    NutritionSchema,                 // meal-level, existing schema
@@ -51,6 +53,7 @@ export const MealDraft = z.object({
 
 ## Server-side handling rules
 
+0. The pipeline stores the table it produced as a `draft` step in `ai_pipeline_runs.steps`; confirmations compare against it (pending) or against the stored rows (saved) to mark the user's edits.
 1. **Never trust** `dish_key`, `meal_level`, `quantity_source` transitions or `nutrition` from the client: the server recomputes `dish_key`, compares each row with the previous server-produced version where available, and marks changed rows as `user`.
 2. `run_id` must exist in `ai_pipeline_runs` for the authenticated user; `meal_id` (if set) must be the user's own meal. Otherwise → `{ ok: false, error: 'not_found' }`.
 3. A draft with `status = 'saved'` can only be updated (`updateMealIngredients`), never inserted again, and only from a draft with `changes_pending = true` that the user confirmed.

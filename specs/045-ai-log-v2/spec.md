@@ -135,7 +135,7 @@ On a new Preferences page, any user can choose how chat meal logging works: **v1
 
 **Scope**
 
-- **FR-021**: The meal logging form (non-chat) is out of scope and keeps its current behaviour.
+- **FR-021** (changed 2026-10-21): There is one input for logging. A log with a meal type picked in the input (a calendar cell or a meal-type chip) follows the user's pipeline preference like any chat log; for v2 it skips the router, and the meal type, day, sharing and co-eaters from the input win over what the parse node infers.
 
 ### Key Entities
 
@@ -154,10 +154,10 @@ Model-reported confidence is not reliable on its own, so levels combine a score 
 
 | Score | Meaning | Example |
 |-------|---------|---------|
-| 0.90–1.00 | Well-known dish with a standard recipe; the user's description matches it | "tortilla de patatas", "entrecot" |
+| 0.90–1.00 | Well-known dish with a standard recipe; the user's description matches it — or a single basic food | "tortilla de patatas", "entrecot", "huevo" |
 | 0.70–0.89 | Known dish with common regional or household variations | "arepa catira", "paella" |
-| 0.40–0.69 | Generic or ambiguous description; several different dishes fit | "un bocadillo", "pasta" |
-| 0.00–0.39 | Unknown or unrecognisable dish | an invented or very local name |
+| 0.50–0.69 | Generic description; a typical version can be proposed but the user may have had something else | "ensalada", "un bocadillo", "pasta" |
+| 0.00–0.49 | Unknown dish; no plausible version can be proposed | an invented or very local name |
 
 **2. Level per dish.**
 
@@ -247,7 +247,7 @@ Index on (`correlation_id`) and (`user_id`, `created_at desc`). RLS: a user can 
 **Changed table `meal_logs`**
 | Column | Type | Notes |
 |--------|------|-------|
-| `log_pipeline` | text, nullable | `'v1'` or `'v2'`; null for meals logged before this feature or through the form |
+| `log_pipeline` | text, nullable | `'v1'` or `'v2'`; null for meals logged before this feature |
 | `is_estimated` | boolean, not null, default false | true for v2 meals; drives the estimated-values alert |
 
 **Unchanged**: `meal_logs.inferred_ingredients` and `meal_logs.nutrition` keep being written by v1 and also filled by v2 (from the ingredient rows), so existing views, recommendations and analytics keep working with either variant.

@@ -48,6 +48,9 @@ Automatically managed by Supabase Auth (`auth.users`), but we track public profi
 - `is_shared` (boolean) default false – True when this meal was logged as shared with household members.
 - `household_id` (uuid, nullable) references `public.households` ON DELETE SET NULL – The household this shared meal belongs to. Set only when `is_shared = true`.
 - `eaten_at` (timestamptz) – Date/time this meal was taken.
+- `log_pipeline` (text, nullable) – `'v1'` or `'v2'`: the chat logging pipeline that created the meal. Null for form logs and meals logged before feature 045.
+- `is_estimated` (boolean) default false – True for v2 meals; quantities are estimates and the UI shows an "estimated" alert.
+- `ai_run_id` (uuid, nullable, unique when set) – The v2 run (`ai_pipeline_runs.id`) whose draft produced the meal. No FK: the run row is telemetry and may be missing. The unique index stops the same draft being saved twice.
 
 ### `public.households`
 **Purpose:** Represents a named household group. One admin, any number of members.
@@ -130,6 +133,57 @@ Automatically managed by Supabase Auth (`auth.users`), but we track public profi
 - `created_at` / `updated_at` (timestamptz)
 
 > **Auto-created**: A trigger (`on_user_created_diet_profile`) inserts a default row (Nestle Menu Planner values) whenever a new `public.users` row is created.
+
+### `public.meal_log_ingredients` (Ingredient rows of v2 meals)
+**Purpose:** One row per ingredient of a meal logged by the v2 pipeline (feature 045). Used for the summary table, history reuse and future nutrition analysis.
+- `id` (uuid) PK
+- `meal_log_id` (uuid) references `public.meal_logs` ON DELETE CASCADE
+- `user_id` (uuid) references `public.users` – the meal's owner; set by the server
+- `dish_name` (text) – dish as shown to the user, e.g. "Arepa catira"
+- `dish_key` (text) – lower-case, accent-free dish name used for history lookup
+- `position` (smallint) – order in the summary table
+- `name` (text) – ingredient name
+- `quantity_g` (numeric) – grams, > 0
+- `quantity_source` (text) – `'stated'` | `'estimated'` | `'history'` | `'user'`
+- `confidence_score` (numeric 0–1, nullable) – model score for the dish; null for history and user rows
+- `confidence_level` (text) – `'high'` | `'medium'` | `'low'`
+- `created_at` (timestamptz)
+
+> No kcal or macronutrient columns yet: they will be calculated from `quantity_g` with a food-composition database (issue #71).
+> **RLS**: SELECT follows meal visibility (owner and co-eaters of shared meals). INSERT/UPDATE/DELETE only by the owner.
+
+### `public.user_preferences` (Per-user app preferences)
+**Purpose:** Choices shown on the Preferences page.
+- `user_id` (uuid) PK, references `public.users` ON DELETE CASCADE
+- `log_pipeline` (text) default `'v1'` – `'v1'` | `'v2'` | `'v2_shadow_v1'`. No row means `'v1'`.
+- `updated_at` (timestamptz)
+
+> **Guard**: trigger `user_preferences_guard` rejects `'v2_shadow_v1'` unless the user is in `developer_whitelist` (error `shadow_requires_developer`).
+> **RLS**: users read, insert and update only their own row.
+
+### `public.developer_whitelist`
+**Purpose:** Accounts allowed to use developer tools (shadow comparison mode).
+- `user_id` (uuid) PK, references `public.users` ON DELETE CASCADE
+- `note` (text, nullable)
+- `created_at` (timestamptz)
+
+> **RLS**: a user can only read their own row. No write policies — rows are added by the team in the SQL editor. Helper: `public.is_developer(uuid)` (SECURITY DEFINER).
+
+### `public.ai_pipeline_runs` (AI logging telemetry)
+**Purpose:** One row per pipeline execution on a meal-logging turn, to compare v1 and v2 on cost, latency and quality.
+- `id` (uuid) PK
+- `user_id` (uuid) references `public.users`
+- `correlation_id` (uuid) – same value for a v2 run and its shadow v1 run on one message
+- `variant` (text) – `'v1'` | `'v2'`; `is_shadow` (boolean)
+- `intent` (text) – `'log'` | `'mixed'` | `'form'`
+- `meal_log_id` (uuid, nullable) references `public.meal_logs` ON DELETE SET NULL
+- `model`, `input_tokens`, `output_tokens`, `est_cost_usd`, `latency_ms` (request start → full reply)
+- `steps` (jsonb) – per step: name, tokens, latency, small summary
+- `confidence_score`, `confidence_level`, `outcome` (`'saved'` | `'draft'` | `'question'` | `'error'` | `'shadow'`)
+- `confirmation_requested`, `user_corrected` (boolean), `error` (text)
+- `created_at` (timestamptz)
+
+> **RLS**: users read, insert and update only their own runs (written by the server on their behalf).
 
 ## Extension Requirements
 - Need `CREATE EXTENSION IF NOT EXISTS vector;` enabled on Supabase.
