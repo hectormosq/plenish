@@ -77,6 +77,14 @@ a {
   text-decoration: none;
 }
 
+/* Form controls don't inherit the page font by default */
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
 html {
   color-scheme: dark;
 }
