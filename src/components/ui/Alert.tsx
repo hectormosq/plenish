@@ -17,7 +17,7 @@ const Box = styled.div<{ $tone: Tone; $compact: boolean }>`
   align-items: center;
   gap: 0.5rem;
   padding: ${(p) => (p.$compact ? '0.15rem 0.5rem' : '0.5rem 0.75rem')};
-  border-radius: ${(p) => (p.$compact ? '9999px' : '8px')};
+  border-radius: ${(p) => (p.$compact ? theme.radii.full : theme.radii.md)};
   border: 1px solid ${(p) => TONES[p.$tone].border};
   background: ${(p) => TONES[p.$tone].bg};
   color: ${(p) => TONES[p.$tone].fg};

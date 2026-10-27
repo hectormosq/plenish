@@ -307,7 +307,7 @@ const Cell = styled.div<{
   transition: background 0.12s;
   ${({ $planned, $planColor }) =>
     $planned && $planColor
-      ? `box-shadow: inset 0 0 0 1px ${$planColor}55;`
+      ? `box-shadow: inset 0 0 0 1px ${alpha($planColor, 0.33)};`
       : ''}
 `;
 
