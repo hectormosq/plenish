@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import { respondToInvitation } from '@/actions/households';
 import { CheckCircle, XCircle, Users } from 'lucide-react';
+import { theme, alpha } from '@/theme';
 
 const Banner = styled.div`
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  border-radius: 12px;
+  background: ${alpha(theme.colors.primary, 0.1)};
+  border: 1px solid ${alpha(theme.colors.primary, 0.3)};
+  border-radius: ${theme.radii.lg};
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -20,7 +21,7 @@ const BannerHeader = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #93c5fd;
+  color: ${theme.colors.primaryBright};
   font-size: 0.85rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -29,7 +30,7 @@ const BannerHeader = styled.div`
 
 const BannerText = styled.p`
   margin: 0;
-  color: #e5e7eb;
+  color: ${theme.colors.text};
   font-size: 0.95rem;
 `;
 
@@ -42,17 +43,17 @@ const AcceptButton = styled.button`
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background: #3b82f6;
-  color: #fff;
+  background: ${theme.colors.primary};
+  color: ${theme.colors.onPrimary};
   border: none;
-  border-radius: 8px;
+  border-radius: ${theme.radii.md};
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.2s;
 
-  &:hover { background: #2563eb; }
+  &:hover { background: ${theme.colors.primaryHover}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -61,22 +62,22 @@ const DeclineButton = styled.button`
   align-items: center;
   gap: 0.4rem;
   background: transparent;
-  color: #9ca3af;
-  border: 1px solid #4b5563;
-  border-radius: 8px;
+  color: ${theme.colors.textSecondary};
+  border: 1px solid ${theme.colors.borderStrong};
+  border-radius: ${theme.radii.md};
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
   transition: color 0.2s, border-color 0.2s;
 
-  &:hover { color: #ef4444; border-color: #ef4444; }
+  &:hover { color: ${theme.colors.danger}; border-color: ${theme.colors.danger}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const ErrorText = styled.p`
   margin: 0;
-  color: #f87171;
+  color: ${theme.colors.dangerBright};
   font-size: 0.85rem;
 `;
 

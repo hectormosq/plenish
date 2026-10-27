@@ -8,6 +8,7 @@ import { Utensils, LogOut, Settings, MessageSquare, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SessionLoggerProvider } from "ai-session-logger/next";
+import { theme, alpha } from '@/theme';
 
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(-8px); }
@@ -53,9 +54,9 @@ const slideDown = keyframes`
 
 const DashboardContainer = styled.div`
   height: 100vh;
-  background-color: #0a0c0a;
-  color: #f0f0f0;
-  font-family: var(--font-geist-sans), sans-serif;
+  background-color: ${theme.colors.bg};
+  color: ${theme.colors.text};
+  font-family: var(--font-sans);
   display: flex;
   flex-direction: column;
 `;
@@ -67,8 +68,8 @@ const NavBar = styled.nav`
   align-items: center;
   justify-content: space-between;
   padding: 1rem 2rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(10, 12, 10, 0.95);
+  border-bottom: 1px solid ${theme.colors.border};
+  background: ${alpha(theme.colors.bg, 0.95)};
   backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
@@ -84,13 +85,11 @@ const NavLogo = styled.div`
   font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: -0.03em;
-  color: #f0f0f0;
+  color: ${theme.colors.text};
 `;
 
 const LogoAccent = styled.span`
-  background: linear-gradient(135deg, #48c78e, #3b82f6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: ${theme.colors.primary};
 `;
 
 const NavActions = styled.div`
@@ -103,18 +102,18 @@ const SettingsLink = styled(Link)`
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  color: #6b7280;
+  color: ${theme.colors.textMuted};
   text-decoration: none;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid ${theme.colors.border};
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: ${theme.radii.md};
   font-size: 0.875rem;
   transition: all 0.2s ease;
 
   &:hover {
-    color: #f0f0f0;
-    border-color: rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.04);
+    color: ${theme.colors.text};
+    border-color: ${theme.colors.borderStrong};
+    background: ${theme.colors.overlay};
   }
 
   @media (max-width: 767px) {
@@ -127,19 +126,19 @@ const SignOutButton = styled.button`
   align-items: center;
   gap: 0.4rem;
   background: transparent;
-  color: #6b7280;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: ${theme.colors.textMuted};
+  border: 1px solid ${theme.colors.border};
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: ${theme.radii.md};
   font-size: 0.875rem;
   font-family: inherit;
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    color: #f0f0f0;
-    border-color: rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.04);
+    color: ${theme.colors.text};
+    border-color: ${theme.colors.borderStrong};
+    background: ${theme.colors.overlay};
   }
 `;
 
@@ -168,7 +167,7 @@ const CalendarArea = styled.main`
 // ─── Unified chat panel — static side panel at ≥900px, overlay below ─────────
 
 const ChatPanel = styled.div<{ $closing: boolean; $side: 'left' | 'right' }>`
-  background: #111;
+  background: ${theme.colors.surface};
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -180,8 +179,8 @@ const ChatPanel = styled.div<{ $closing: boolean; $side: 'left' | 'right' }>`
     flex-shrink: 0;
     order: ${({ $side }) => $side === 'right' ? 2 : 0};
     ${({ $side }) => $side === 'right'
-      ? 'border-left: 1px solid rgba(255,255,255,0.08);'
-      : 'border-right: 1px solid rgba(255,255,255,0.08);'}
+      ? `border-left: 1px solid ${theme.colors.border};`
+      : `border-right: 1px solid ${theme.colors.border};`}
     animation: ${({ $closing }) =>
       $closing ? css`${fadeOut} 0.18s ease forwards` : 'none'};
   }
@@ -195,8 +194,8 @@ const ChatPanel = styled.div<{ $closing: boolean; $side: 'left' | 'right' }>`
     width: 420px;
     z-index: 100;
     ${({ $side }) => $side === 'right'
-      ? 'border-left: 1px solid rgba(255,255,255,0.08); box-shadow: -8px 0 32px rgba(0,0,0,0.5);'
-      : 'border-right: 1px solid rgba(255,255,255,0.08); box-shadow: 8px 0 32px rgba(0,0,0,0.5);'}
+      ? `border-left: 1px solid ${theme.colors.border}; box-shadow: -8px 0 32px ${alpha(theme.colors.shadow, 0.5)};`
+      : `border-right: 1px solid ${theme.colors.border}; box-shadow: 8px 0 32px ${alpha(theme.colors.shadow, 0.5)};`}
     animation: ${({ $closing, $side }) => {
       if ($side === 'right') {
         return $closing
@@ -217,8 +216,8 @@ const ChatPanel = styled.div<{ $closing: boolean; $side: 'left' | 'right' }>`
     right: 0;
     z-index: 200;
     height: 90vh;
-    border-radius: 20px 20px 0 0;
-    border-top: 1px solid rgba(255,255,255,0.08);
+    border-radius: ${theme.radii.xl} ${theme.radii.xl} 0 0;
+    border-top: 1px solid ${theme.colors.border};
     animation: ${({ $closing }) =>
       $closing
         ? css`${slideDown} 0.3s ease forwards`
@@ -232,8 +231,8 @@ const ChatPanel = styled.div<{ $closing: boolean; $side: 'left' | 'right' }>`
 const SheetHandle = styled.div`
   width: 36px;
   height: 4px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 2px;
+  background: ${alpha(theme.colors.text, 0.2)};
+  border-radius: ${theme.radii.sm};
   margin: 12px auto 0;
   flex-shrink: 0;
 
@@ -247,7 +246,7 @@ const PanelHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid ${theme.colors.border};
   flex-shrink: 0;
 `;
 
@@ -255,15 +254,15 @@ const PanelTitle = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #a855f7;
+  color: ${theme.colors.violet};
   font-weight: 600;
   font-size: 0.95rem;
 `;
 
 const PanelCloseButton = styled.button`
-  background: rgba(255, 255, 255, 0.06);
+  background: ${theme.colors.overlayStrong};
   border: none;
-  color: #888;
+  color: ${theme.colors.textMuted};
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -274,8 +273,8 @@ const PanelCloseButton = styled.button`
   transition: background 0.2s, color 0.2s;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: #f0f0f0;
+    background: ${alpha(theme.colors.text, 0.12)};
+    color: ${theme.colors.text};
   }
 `;
 
@@ -289,7 +288,7 @@ const PanelBody = styled.div`
   }
 
   &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+  &::-webkit-scrollbar-thumb { background: ${theme.colors.surfaceHighest}; border-radius: ${theme.radii.sm}; }
 `;
 
 // ─── Backdrop — only shown at overlay breakpoints (< 900px) ──────────────────
@@ -298,7 +297,7 @@ const Backdrop = styled.div`
   position: fixed;
   inset: 0;
   z-index: 90;
-  background: rgba(0, 0, 0, 0.5);
+  background: ${alpha(theme.colors.shadow, 0.5)};
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   animation: ${fadeIn} 0.2s ease forwards;
@@ -316,14 +315,14 @@ const FAB = styled.button`
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #48c78e, #3b82f6);
+  background: ${theme.colors.primary};
   border: none;
-  color: #fff;
+  color: ${theme.colors.onPrimary};
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 20px rgba(72, 199, 142, 0.4);
+  box-shadow: 0 4px 20px ${alpha(theme.colors.primary, 0.4)};
   transition: transform 0.2s, box-shadow 0.2s;
   -webkit-tap-highlight-color: transparent;
 
@@ -337,7 +336,7 @@ const FAB = styled.button`
 
   &:active {
     transform: scale(0.93);
-    box-shadow: 0 2px 12px rgba(72, 199, 142, 0.3);
+    box-shadow: 0 2px 12px ${alpha(theme.colors.primary, 0.3)};
   }
 `;
 
@@ -437,7 +436,7 @@ export function DashboardLayout({
         {/* ── Top Nav ─────────────────────────────────────────────────── */}
         <NavBar>
           <NavLogo>
-            <Utensils size={20} color="#48c78e" />
+            <Utensils size={20} style={{ color: theme.colors.primary }} />
             <LogoAccent>Plenish</LogoAccent>
           </NavLogo>
           <NavActions>

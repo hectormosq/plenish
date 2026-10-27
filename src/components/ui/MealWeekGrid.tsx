@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { useSessionLogger } from 'ai-session-logger/next';
 import { CellActionPicker } from '@/components/specific/CellActionPicker';
+import { theme, alpha } from '@/theme';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,25 +61,18 @@ const MEAL_LABELS: Record<MealType, string> = {
   dinner: 'Dinner',
 };
 
-const MEAL_COLOR: Record<MealType, string> = {
-  breakfast: '#fbbf24',
-  snack:     '#a78bfa',
-  lunch:     '#34d399',
-  dinner:    '#818cf8',
-};
-
 const MEAL_BG: Record<MealType, string> = {
-  breakfast: 'rgba(251, 191, 36, 0.10)',
-  snack:     'rgba(167, 139, 250, 0.10)',
-  lunch:     'rgba(52, 211, 153, 0.10)',
-  dinner:    'rgba(129, 140, 248, 0.10)',
+  breakfast: alpha(theme.colors.secondary, 0.1),
+  snack:     alpha(theme.colors.violet, 0.1),
+  lunch:     alpha(theme.colors.primary, 0.1),
+  dinner:    alpha(theme.colors.indigo, 0.1),
 };
 
 const PLANNED_BG: Record<MealType, string> = {
-  breakfast: 'rgba(251, 191, 36, 0.05)',
-  snack:     'rgba(167, 139, 250, 0.05)',
-  lunch:     'rgba(52, 211, 153, 0.05)',
-  dinner:    'rgba(129, 140, 248, 0.05)',
+  breakfast: alpha(theme.colors.secondary, 0.05),
+  snack:     alpha(theme.colors.violet, 0.05),
+  lunch:     alpha(theme.colors.primary, 0.05),
+  dinner:    alpha(theme.colors.indigo, 0.05),
 };
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -140,9 +134,9 @@ function getWindowLabel(visibleDays: Date[], dayOffset: number, count: number): 
 // ─── Styled Components ────────────────────────────────────────────────────────
 
 const Wrapper = styled.div`
-  background: #111;
-  border: 1px solid #1e1e1e;
-  border-radius: 16px;
+  background: ${theme.colors.surface};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.radii.xl};
   overflow: visible;
   position: relative;
   width: 100%;
@@ -152,8 +146,8 @@ const Title = styled.div`
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #9ca3af;
-  border-bottom: 1px solid #1e1e1e;
+  color: ${theme.colors.textSecondary};
+  border-bottom: 1px solid ${theme.colors.border};
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -162,14 +156,14 @@ const Title = styled.div`
 const WeekLabel = styled.span`
   flex: 1;
   font-size: 0.8rem;
-  color: #9ca3af;
+  color: ${theme.colors.textSecondary};
 `;
 
 const NavButton = styled.button`
   background: transparent;
-  border: 1px solid #2a2a2a;
-  color: #6b7280;
-  border-radius: 6px;
+  border: 1px solid ${theme.colors.border};
+  color: ${theme.colors.textMuted};
+  border-radius: ${theme.radii.md};
   padding: 0.2rem 0.4rem;
   cursor: pointer;
   display: flex;
@@ -177,9 +171,9 @@ const NavButton = styled.button`
   transition: all 0.15s;
 
   &:hover:not(:disabled) {
-    color: #d1d5db;
-    border-color: #3a3a3a;
-    background: rgba(255,255,255,0.04);
+    color: ${theme.colors.textSecondary};
+    border-color: ${theme.colors.borderStrong};
+    background: ${theme.colors.overlay};
   }
 
   &:disabled {
@@ -193,9 +187,9 @@ const PlanWeekButton = styled.button<{ $loading?: boolean }>`
   align-items: center;
   gap: 0.35rem;
   background: transparent;
-  border: 1px solid rgba(72, 199, 142, 0.3);
-  color: #48c78e;
-  border-radius: 6px;
+  border: 1px solid ${alpha(theme.colors.primary, 0.3)};
+  color: ${theme.colors.primary};
+  border-radius: ${theme.radii.md};
   padding: 0.2rem 0.6rem;
   font-size: 0.7rem;
   font-weight: 600;
@@ -205,8 +199,8 @@ const PlanWeekButton = styled.button<{ $loading?: boolean }>`
   opacity: ${({ $loading }) => ($loading ? 0.6 : 1)};
 
   &:hover:not(:disabled) {
-    background: rgba(72, 199, 142, 0.08);
-    border-color: rgba(72, 199, 142, 0.6);
+    background: ${alpha(theme.colors.primary, 0.08)};
+    border-color: ${alpha(theme.colors.primary, 0.6)};
   }
 
   &:disabled {
@@ -217,7 +211,7 @@ const PlanWeekButton = styled.button<{ $loading?: boolean }>`
 
 const LoadingText = styled.span`
   font-size: 0.7rem;
-  color: #4b5563;
+  color: ${theme.colors.textMuted};
 `;
 
 const Grid = styled.div<{ $columns: number }>`
@@ -231,29 +225,29 @@ const Grid = styled.div<{ $columns: number }>`
 `;
 
 const CornerCell = styled.div`
-  border-right: 1px solid #1a1a1a;
-  border-bottom: 1px solid #1a1a1a;
+  border-right: 1px solid ${theme.colors.border};
+  border-bottom: 1px solid ${theme.colors.border};
 `;
 
 const HeaderCell = styled.div<{ $today: boolean }>`
   padding: 0.625rem 0.5rem;
   text-align: center;
-  border-right: 1px solid #1a1a1a;
-  border-bottom: 1px solid #1a1a1a;
-  background: ${({ $today }) => ($today ? 'rgba(59,130,246,0.07)' : 'transparent')};
+  border-right: 1px solid ${theme.colors.border};
+  border-bottom: 1px solid ${theme.colors.border};
+  background: ${({ $today }) => ($today ? alpha(theme.colors.primary, 0.07) : 'transparent')};
 `;
 
 const DayName = styled.div<{ $today: boolean }>`
   font-size: 0.75rem;
   font-weight: ${({ $today }) => ($today ? 700 : 500)};
-  color: ${({ $today }) => ($today ? '#60a5fa' : '#6b7280')};
+  color: ${({ $today }) => ($today ? theme.colors.primaryBright : theme.colors.textMuted)};
   text-transform: uppercase;
   letter-spacing: 0.4px;
 `;
 
 const DayDate = styled.div`
   font-size: 0.65rem;
-  color: #374151;
+  color: ${theme.colors.textFaint};
   margin-top: 0.1rem;
 `;
 
@@ -262,8 +256,8 @@ const RowLabel = styled.div<{ $color: string }>`
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  border-right: 1px solid #1a1a1a;
-  border-bottom: 1px solid #1a1a1a;
+  border-right: 1px solid ${theme.colors.border};
+  border-bottom: 1px solid ${theme.colors.border};
 
   @media (max-width: 639px) {
     padding: 0.4rem 0.3rem;
@@ -303,17 +297,17 @@ const Cell = styled.div<{
     padding: 0.3rem;
   }
   padding: 0.4rem;
-  border-right: 1px solid #1a1a1a;
-  border-bottom: 1px solid #1a1a1a;
-  border-left: ${({ $shared }) => ($shared ? '2px solid rgba(96,165,250,0.35)' : '1px solid #1a1a1a')};
+  border-right: 1px solid ${theme.colors.border};
+  border-bottom: 1px solid ${theme.colors.border};
+  border-left: ${({ $shared }) => ($shared ? `2px solid ${alpha(theme.colors.info, 0.35)}` : `1px solid ${theme.colors.border}`)};
   background-color: ${({ $filled, $bg, $today }) =>
-    $filled ? $bg : $today ? 'rgba(59,130,246,0.025)' : 'transparent'};
+    $filled ? $bg : $today ? alpha(theme.colors.primary, 0.025) : 'transparent'};
   background-image: ${({ $shared }) =>
-    $shared ? 'linear-gradient(rgba(96,165,250,0.13), rgba(96,165,250,0.13))' : 'none'};
+    $shared ? `linear-gradient(${alpha(theme.colors.info, 0.13)}, ${alpha(theme.colors.info, 0.13)})` : 'none'};
   transition: background 0.12s;
   ${({ $planned, $planColor }) =>
     $planned && $planColor
-      ? `box-shadow: inset 0 0 0 1px ${$planColor}55;`
+      ? `box-shadow: inset 0 0 0 1px ${alpha($planColor, 0.33)};`
       : ''}
 `;
 
@@ -329,7 +323,7 @@ const EmptyPastCell = styled(Cell)`
   cursor: pointer;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: ${theme.colors.overlay};
   }
 `;
 
@@ -339,7 +333,7 @@ const Ghost = styled.span`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #1f1f1f;
+  color: ${theme.colors.textFaint};
   font-size: 0.875rem;
   pointer-events: none;
 `;
@@ -352,7 +346,7 @@ const PlusTrigger = styled.div`
   justify-content: center;
   opacity: 0;
   transition: opacity 0.15s;
-  color: #374151;
+  color: ${theme.colors.textFaint};
   pointer-events: none;
 `;
 
@@ -362,7 +356,7 @@ const PlanningSpinner = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #4b5563;
+  color: ${theme.colors.textMuted};
 `;
 
 const CellBody = styled.div`
@@ -376,7 +370,7 @@ const CellBody = styled.div`
 const CellText = styled.p`
   margin: 0;
   font-size: 0.72rem;
-  color: #d1d5db;
+  color: ${theme.colors.textSecondary};
   line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -387,7 +381,7 @@ const CellText = styled.p`
 const PlannedName = styled.p`
   margin: 0;
   font-size: 0.68rem;
-  color: #6b7280;
+  color: ${theme.colors.textMuted};
   line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -409,7 +403,7 @@ const PlanActionBtn = styled.button<{ $variant: 'accept' | 'regen' | 'dismiss' }
   align-items: center;
   justify-content: center;
   padding: 0.2rem 0;
-  border-radius: 4px;
+  border-radius: ${theme.radii.sm};
   border: 1px solid;
   cursor: pointer;
   font-family: inherit;
@@ -417,22 +411,22 @@ const PlanActionBtn = styled.button<{ $variant: 'accept' | 'regen' | 'dismiss' }
 
   ${({ $variant }) => {
     if ($variant === 'accept') return `
-      background: rgba(72, 199, 142, 0.08);
-      border-color: rgba(72, 199, 142, 0.25);
-      color: #48c78e;
-      &:hover:not(:disabled) { background: rgba(72, 199, 142, 0.18); }
+      background: ${alpha(theme.colors.primary, 0.08)};
+      border-color: ${alpha(theme.colors.primary, 0.25)};
+      color: ${theme.colors.primary};
+      &:hover:not(:disabled) { background: ${alpha(theme.colors.primary, 0.18)}; }
     `;
     if ($variant === 'regen') return `
-      background: rgba(251, 191, 36, 0.08);
-      border-color: rgba(251, 191, 36, 0.25);
-      color: #fbbf24;
-      &:hover:not(:disabled) { background: rgba(251, 191, 36, 0.18); }
+      background: ${alpha(theme.colors.secondary, 0.08)};
+      border-color: ${alpha(theme.colors.secondary, 0.25)};
+      color: ${theme.colors.secondary};
+      &:hover:not(:disabled) { background: ${alpha(theme.colors.secondary, 0.18)}; }
     `;
     return `
-      background: rgba(107, 114, 128, 0.08);
-      border-color: rgba(107, 114, 128, 0.2);
-      color: #4b5563;
-      &:hover:not(:disabled) { background: rgba(107, 114, 128, 0.18); }
+      background: ${alpha(theme.colors.textMuted, 0.08)};
+      border-color: ${alpha(theme.colors.textMuted, 0.2)};
+      color: ${theme.colors.textMuted};
+      &:hover:not(:disabled) { background: ${alpha(theme.colors.textMuted, 0.18)}; }
     `;
   }}
 
@@ -446,7 +440,7 @@ const PlanActionBtn = styled.button<{ $variant: 'accept' | 'regen' | 'dismiss' }
 const EstimatedMark = styled.span`
   font-size: 0.7rem;
   font-weight: 700;
-  color: #fcd34d;
+  color: ${theme.colors.secondaryBright};
   line-height: 1;
 `;
 
@@ -459,7 +453,7 @@ const CellFooter = styled.div`
 
 const ExtraCount = styled.span`
   font-size: 0.6rem;
-  color: #4b5563;
+  color: ${theme.colors.textMuted};
 `;
 
 const InfoButton = styled.button`
@@ -468,18 +462,18 @@ const InfoButton = styled.button`
   right: 4px;
   background: transparent;
   border: none;
-  color: #2e2e2e;
+  color: ${theme.colors.textFaint};
   cursor: pointer;
   padding: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: ${theme.radii.sm};
   transition: color 0.12s, background 0.12s;
 
   &:hover {
-    color: #6b7280;
-    background: rgba(255, 255, 255, 0.06);
+    color: ${theme.colors.textMuted};
+    background: ${theme.colors.overlayStrong};
   }
 `;
 
@@ -487,21 +481,21 @@ const DismissButton = styled.button`
   position: absolute;
   top: 4px;
   right: 4px;
-  background: rgba(96, 165, 250, 0.1);
-  border: 1px solid rgba(96, 165, 250, 0.25);
-  color: #60a5fa;
+  background: ${alpha(theme.colors.info, 0.1)};
+  border: 1px solid ${alpha(theme.colors.info, 0.25)};
+  color: ${theme.colors.info};
   cursor: pointer;
   padding: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: ${theme.radii.sm};
   transition: all 0.12s;
 
   &:hover:not(:disabled) {
-    background: rgba(96, 165, 250, 0.22);
-    color: #93c5fd;
-    border-color: rgba(96, 165, 250, 0.45);
+    background: ${alpha(theme.colors.info, 0.22)};
+    color: ${theme.colors.infoBright};
+    border-color: ${alpha(theme.colors.info, 0.45)};
   }
 
   &:disabled {
@@ -512,7 +506,7 @@ const DismissButton = styled.button`
 
 const CoEaterLabel = styled.span`
   font-size: 0.6rem;
-  color: #60a5fa;
+  color: ${theme.colors.info};
   display: flex;
   align-items: center;
   gap: 0.15rem;
@@ -528,25 +522,25 @@ const TooltipPortal = styled.div<{ $x: number; $y: number }>`
   transform: translateX(-50%) translateY(-100%);
   z-index: 50;
   width: 224px;
-  background: #1c1c1c;
-  border: 1px solid #2e2e2e;
-  border-radius: 10px;
+  background: ${theme.colors.surfaceContainer};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.radii.lg};
   padding: 0.75rem;
-  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  box-shadow: ${theme.shadows.popover};
   pointer-events: all;
 `;
 
 const TipText = styled.p`
   margin: 0 0 0.35rem;
   font-size: 0.8rem;
-  color: #e5e7eb;
+  color: ${theme.colors.text};
   line-height: 1.4;
 `;
 
 const TipMeta = styled.p`
   margin: 0 0 0.6rem;
   font-size: 0.7rem;
-  color: #6b7280;
+  color: ${theme.colors.textMuted};
   display: flex;
   align-items: center;
   gap: 0.3rem;
@@ -560,11 +554,11 @@ const TipActions = styled.div`
 const TipButton = styled.button<{ $variant: 'delete' | 'dismiss' }>`
   flex: 1;
   background: ${({ $variant }) =>
-    $variant === 'delete' ? 'rgba(239,68,68,0.1)' : 'rgba(107,114,128,0.1)'};
-  color: ${({ $variant }) => ($variant === 'delete' ? '#ef4444' : '#9ca3af')};
+    $variant === 'delete' ? alpha(theme.colors.danger, 0.1) : alpha(theme.colors.textMuted, 0.1)};
+  color: ${({ $variant }) => ($variant === 'delete' ? theme.colors.danger : theme.colors.textSecondary)};
   border: 1px solid ${({ $variant }) =>
-    $variant === 'delete' ? 'rgba(239,68,68,0.25)' : 'rgba(107,114,128,0.2)'};
-  border-radius: 6px;
+    $variant === 'delete' ? alpha(theme.colors.danger, 0.25) : alpha(theme.colors.textMuted, 0.2)};
+  border-radius: ${theme.radii.md};
   padding: 0.375rem 0.5rem;
   font-size: 0.72rem;
   font-family: inherit;
@@ -577,7 +571,7 @@ const TipButton = styled.button<{ $variant: 'delete' | 'dismiss' }>`
 
   &:hover:not(:disabled) {
     background: ${({ $variant }) =>
-      $variant === 'delete' ? 'rgba(239,68,68,0.2)' : 'rgba(107,114,128,0.2)'};
+      $variant === 'delete' ? alpha(theme.colors.danger, 0.2) : alpha(theme.colors.textMuted, 0.2)};
   }
 
   &:disabled {
@@ -589,7 +583,7 @@ const TipButton = styled.button<{ $variant: 'delete' | 'dismiss' }>`
 const ExpandToggle = styled.button`
   background: transparent;
   border: none;
-  color: #4b5563;
+  color: ${theme.colors.textMuted};
   cursor: pointer;
   padding: 0;
   display: flex;
@@ -599,13 +593,13 @@ const ExpandToggle = styled.button`
   transition: color 0.12s;
   flex-shrink: 0;
 
-  &:hover { color: #9ca3af; }
+  &:hover { color: ${theme.colors.textSecondary}; }
 `;
 
 const ExpandedContent = styled.div`
   margin-top: 0.3rem;
   padding-top: 0.3rem;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid ${theme.colors.border};
 `;
 
 const IngredientList = styled.ul`
@@ -616,14 +610,14 @@ const IngredientList = styled.ul`
 
 const IngredientItem = styled.li`
   font-size: 0.6rem;
-  color: #6b7280;
+  color: ${theme.colors.textMuted};
   line-height: 1.4;
 `;
 
 const InstructionsText = styled.p`
   margin: 0;
   font-size: 0.6rem;
-  color: #6b7280;
+  color: ${theme.colors.textMuted};
   line-height: 1.45;
   font-style: italic;
 `;
@@ -631,32 +625,32 @@ const InstructionsText = styled.p`
 const NoDetailsText = styled.p`
   margin: 0;
   font-size: 0.6rem;
-  color: #374151;
+  color: ${theme.colors.textFaint};
   font-style: italic;
 `;
 
 const HintOverlay = styled.div`
   margin-top: 0.35rem;
   padding-top: 0.35rem;
-  border-top: 1px solid rgba(251, 191, 36, 0.15);
+  border-top: 1px solid ${alpha(theme.colors.secondary, 0.15)};
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 `;
 
 const HintInput = styled.input`
-  background: rgba(255,255,255,0.04);
-  border: 1px solid #2a2a2a;
-  color: #d1d5db;
-  border-radius: 4px;
+  background: ${theme.colors.overlay};
+  border: 1px solid ${theme.colors.border};
+  color: ${theme.colors.textSecondary};
+  border-radius: ${theme.radii.sm};
   padding: 0.2rem 0.4rem;
   font-size: 0.65rem;
   font-family: inherit;
   outline: none;
   width: 100%;
 
-  &::placeholder { color: #4b5563; }
-  &:focus { border-color: rgba(251, 191, 36, 0.35); }
+  &::placeholder { color: ${theme.colors.textMuted}; }
+  &:focus { border-color: ${alpha(theme.colors.secondary, 0.35)}; }
 `;
 
 const HintButtons = styled.div`
@@ -666,33 +660,33 @@ const HintButtons = styled.div`
 
 const HintConfirmBtn = styled.button`
   flex: 1;
-  background: rgba(251, 191, 36, 0.08);
-  border: 1px solid rgba(251, 191, 36, 0.25);
-  color: #fbbf24;
-  border-radius: 4px;
+  background: ${alpha(theme.colors.secondary, 0.08)};
+  border: 1px solid ${alpha(theme.colors.secondary, 0.25)};
+  color: ${theme.colors.secondary};
+  border-radius: ${theme.radii.sm};
   padding: 0.2rem 0;
   font-size: 0.6rem;
   font-family: inherit;
   cursor: pointer;
   transition: all 0.12s;
 
-  &:hover:not(:disabled) { background: rgba(251, 191, 36, 0.18); }
+  &:hover:not(:disabled) { background: ${alpha(theme.colors.secondary, 0.18)}; }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 `;
 
 const HintSkipBtn = styled.button`
   flex: 1;
-  background: rgba(107, 114, 128, 0.08);
-  border: 1px solid rgba(107, 114, 128, 0.2);
-  color: #6b7280;
-  border-radius: 4px;
+  background: ${alpha(theme.colors.textMuted, 0.08)};
+  border: 1px solid ${alpha(theme.colors.textMuted, 0.2)};
+  color: ${theme.colors.textMuted};
+  border-radius: ${theme.radii.sm};
   padding: 0.2rem 0;
   font-size: 0.6rem;
   font-family: inherit;
   cursor: pointer;
   transition: all 0.12s;
 
-  &:hover:not(:disabled) { background: rgba(107, 114, 128, 0.18); }
+  &:hover:not(:disabled) { background: ${alpha(theme.colors.textMuted, 0.18)}; }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 `;
 
@@ -989,7 +983,7 @@ export function MealWeekGrid({
         <NavButton onClick={handlePrev} disabled={isLoadingMore} title="Previous">
           <ChevronLeft size={13} />
         </NavButton>
-        <span style={{ color: '#3b82f6', fontSize: '0.875rem' }}>📅</span>
+        <span style={{ color: theme.colors.primary, fontSize: '0.875rem' }}>📅</span>
         <WeekLabel>
           {isLoadingMore ? <LoadingText>Loading…</LoadingText> : getWindowLabel(visibleDays, dayOffset, visibleCount)}
         </WeekLabel>
@@ -1030,8 +1024,8 @@ export function MealWeekGrid({
         {/* Meal type rows */}
         {MEAL_TYPES.map((mealType) => (
           <React.Fragment key={mealType}>
-            <RowLabel $color={MEAL_COLOR[mealType]}>
-              <LabelText $color={MEAL_COLOR[mealType]}>{MEAL_LABELS[mealType]}</LabelText>
+            <RowLabel $color={theme.meal[mealType]}>
+              <LabelText $color={theme.meal[mealType]}>{MEAL_LABELS[mealType]}</LabelText>
             </RowLabel>
 
             {visibleDays.map((day) => {
@@ -1103,7 +1097,7 @@ export function MealWeekGrid({
                     $filled
                     $bg={PLANNED_BG[mealType]}
                     $planned
-                    $planColor={MEAL_COLOR[mealType]}
+                    $planColor={theme.meal[mealType]}
                   >
                     <CellBody>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.2rem' }}>

@@ -14,6 +14,7 @@ import { MealDraftTable } from '@/components/specific/MealDraftTable';
 import { draftOfPart } from '@/lib/ai/log-v2/draft-parts';
 import { buildReply } from '@/lib/ai/log-v2/reply';
 import type { MealDraft, PlenishUIMessage } from '@/lib/ai/log-v2/schemas';
+import { theme, alpha } from '@/theme';
 
 // ─── Styled Components (from AIChatBox) ────────────────────────────────────
 
@@ -40,8 +41,8 @@ const MessageList = styled.div`
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
-    background: #444;
-    border-radius: 4px;
+    background: ${theme.colors.surfaceHighest};
+    border-radius: ${theme.radii.sm};
   }
 `;
 
@@ -50,7 +51,7 @@ const MessageBubble = styled.div<{ $role: 'user' | 'assistant'; $wide?: boolean 
   width: ${(props) => (props.$wide ? '100%' : 'auto')};
   box-sizing: border-box;
   padding: 1rem;
-  border-radius: 12px;
+  border-radius: ${theme.radii.lg};
   line-height: 1.5;
   font-size: 0.95rem;
 
@@ -58,15 +59,15 @@ const MessageBubble = styled.div<{ $role: 'user' | 'assistant'; $wide?: boolean 
     props.$role === 'user'
       ? `
       align-self: flex-end;
-      background-color: #3b82f6;
-      color: white;
+      background-color: ${theme.colors.primary};
+      color: ${theme.colors.onPrimary};
       border-bottom-right-radius: 2px;
     `
       : `
       align-self: flex-start;
-      background-color: #2a2a2a;
-      border: 1px solid #444;
-      color: #e5e5e5;
+      background-color: ${theme.colors.surfaceHigh};
+      border: 1px solid ${theme.colors.borderStrong};
+      color: ${theme.colors.text};
       border-bottom-left-radius: 2px;
     `}
 `;
@@ -82,18 +83,18 @@ const ChipRow = styled.div`
 `;
 
 const ChipSeparator = styled.span`
-  color: #444;
+  color: ${theme.colors.textFaint};
   font-size: 1rem;
   user-select: none;
   padding: 0 0.25rem;
 `;
 
 const DateChip = styled.button<{ $active: boolean }>`
-  background: ${({ $active }) => ($active ? 'rgba(168, 85, 247, 0.15)' : 'transparent')};
-  border: 1px solid ${({ $active }) => ($active ? '#a855f7' : '#333')};
-  color: ${({ $active }) => ($active ? '#d8b4fe' : '#999')};
+  background: ${({ $active }) => ($active ? alpha(theme.colors.violet, 0.15) : 'transparent')};
+  border: 1px solid ${({ $active }) => ($active ? theme.colors.violet : theme.colors.border)};
+  color: ${({ $active }) => ($active ? theme.colors.violet : theme.colors.textSecondary)};
   padding: 0.5rem 1rem;
-  border-radius: 20px;
+  border-radius: ${theme.radii.xl};
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -104,8 +105,8 @@ const DateChip = styled.button<{ $active: boolean }>`
   gap: 0.375rem;
 
   &:hover:not(:disabled) {
-    border-color: #a855f7;
-    color: #d8b4fe;
+    border-color: ${theme.colors.violet};
+    color: ${theme.colors.violet};
   }
 
   &:disabled {
@@ -123,11 +124,11 @@ const HiddenDateInput = styled.input`
 `;
 
 const MealTypeChip = styled.button<{ $active: boolean }>`
-  background: ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
-  border: 1px solid ${({ $active }) => ($active ? '#3b82f6' : '#333')};
-  color: ${({ $active }) => ($active ? '#fff' : '#999')};
+  background: ${({ $active }) => ($active ? theme.colors.primary : 'transparent')};
+  border: 1px solid ${({ $active }) => ($active ? theme.colors.primary : theme.colors.border)};
+  color: ${({ $active }) => ($active ? theme.colors.onPrimary : theme.colors.textSecondary)};
   padding: 0.5rem 1rem;
-  border-radius: 20px;
+  border-radius: ${theme.radii.xl};
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -135,8 +136,8 @@ const MealTypeChip = styled.button<{ $active: boolean }>`
   font-family: inherit;
 
   &:hover:not(:disabled) {
-    border-color: #3b82f6;
-    color: ${({ $active }) => ($active ? '#fff' : '#3b82f6')};
+    border-color: ${theme.colors.primary};
+    color: ${({ $active }) => ($active ? theme.colors.onPrimary : theme.colors.primary)};
   }
 
   &:disabled {
@@ -156,11 +157,11 @@ const InputForm = styled.form`
 
 const ChatTextarea = styled.textarea`
   flex: 1;
-  background-color: #222;
-  border: 1px solid #444;
-  color: #fff;
+  background-color: ${theme.colors.surfaceHigh};
+  border: 1px solid ${theme.colors.borderStrong};
+  color: ${theme.colors.text};
   padding: 0.75rem 1rem;
-  border-radius: 1rem;
+  border-radius: ${theme.radii.xl};
   outline: none;
   font-family: inherit;
   font-size: 1rem;
@@ -176,11 +177,11 @@ const ChatTextarea = styled.textarea`
   }
 
   &:focus {
-    border-color: #3b82f6;
+    border-color: ${theme.colors.primary};
   }
 
   &::placeholder {
-    color: #666;
+    color: ${theme.colors.textMuted};
   }
 
   &:disabled {
@@ -190,8 +191,8 @@ const ChatTextarea = styled.textarea`
 `;
 
 const SendButton = styled.button`
-  background-color: #3b82f6;
-  color: white;
+  background-color: ${theme.colors.primary};
+  color: ${theme.colors.onPrimary};
   border: none;
   width: 50px;
   height: 50px;
@@ -204,12 +205,13 @@ const SendButton = styled.button`
   flex-shrink: 0;
 
   &:hover:not(:disabled) {
-    background-color: #2563eb;
+    background-color: ${theme.colors.primaryHover};
     transform: scale(1.05);
   }
 
   &:disabled {
-    background-color: #444;
+    background-color: ${theme.colors.surfaceHighest};
+    color: ${theme.colors.textMuted};
     cursor: not-allowed;
     transform: none;
   }
@@ -234,10 +236,10 @@ const ShareButtonWrapper = styled.div`
 
 const ShareButton = styled.button<{ $state: 'just-me' | 'all' | 'partial' }>`
   background: ${({ $state }) =>
-    $state === 'just-me' ? 'transparent' : 'rgba(59, 130, 246, 0.15)'};
-  border: 1px solid ${({ $state }) => ($state === 'just-me' ? '#333' : '#3b82f6')};
-  color: ${({ $state }) => ($state === 'just-me' ? '#999' : '#93c5fd')};
-  border-radius: 20px;
+    $state === 'just-me' ? 'transparent' : alpha(theme.colors.primary, 0.15)};
+  border: 1px solid ${({ $state }) => ($state === 'just-me' ? theme.colors.border : theme.colors.primary)};
+  color: ${({ $state }) => ($state === 'just-me' ? theme.colors.textSecondary : theme.colors.primaryBright)};
+  border-radius: ${theme.radii.xl};
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
@@ -249,8 +251,8 @@ const ShareButton = styled.button<{ $state: 'just-me' | 'all' | 'partial' }>`
   gap: 0.4rem;
 
   &:hover {
-    border-color: #3b82f6;
-    color: #93c5fd;
+    border-color: ${theme.colors.primary};
+    color: ${theme.colors.primaryBright};
   }
 
   &:disabled {
@@ -262,17 +264,17 @@ const ShareButton = styled.button<{ $state: 'just-me' | 'all' | 'partial' }>`
 const EditIconButton = styled.button`
   background: none;
   border: none;
-  color: #888;
+  color: ${theme.colors.textMuted};
   cursor: pointer;
   padding: 0.25rem;
   margin-left: 2px;
   display: flex;
   align-items: center;
-  border-radius: 4px;
+  border-radius: ${theme.radii.sm};
   transition: color 0.2s;
 
   &:hover {
-    color: #93c5fd;
+    color: ${theme.colors.primaryBright};
   }
 
   &:disabled {
@@ -562,11 +564,11 @@ export function MealLogger({
         {error && (
           <div
             style={{
-              color: '#ef4444',
+              color: theme.colors.danger,
               fontSize: '0.875rem',
               padding: '1rem',
-              border: '1px solid #ef4444',
-              borderRadius: '8px',
+              border: `1px solid ${theme.colors.danger}`,
+              borderRadius: theme.radii.md,
               marginTop: '0.5rem',
             }}
           >

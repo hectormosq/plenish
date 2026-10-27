@@ -3,6 +3,7 @@
 import styled, { keyframes } from 'styled-components';
 import { Utensils } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { theme, alpha } from '@/theme';
 
 // --- Animations ---
 const fadeUp = keyframes`
@@ -11,8 +12,8 @@ const fadeUp = keyframes`
 `;
 
 const pulse = keyframes`
-  0%, 100% { box-shadow: 0 0 0 0 rgba(72, 199, 142, 0.4); }
-  50%       { box-shadow: 0 0 0 12px rgba(72, 199, 142, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 ${alpha(theme.colors.primary, 0.4)}; }
+  50%       { box-shadow: 0 0 0 12px ${alpha(theme.colors.primary, 0)}; }
 `;
 
 // --- Styled Components ---
@@ -22,10 +23,10 @@ const PageWrapper = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(ellipse at 60% 10%, #1a2f1e 0%, #0a0f0b 60%),
-              linear-gradient(180deg, #0d1a10 0%, #090d0a 100%);
+  background: radial-gradient(ellipse at 60% 10%, ${alpha(theme.colors.primary, 0.15)} 0%, ${theme.colors.bg} 60%),
+              linear-gradient(180deg, ${theme.colors.surface} 0%, ${theme.colors.bg} 100%);
   padding: 2rem;
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--font-sans);
 `;
 
 const Card = styled.div`
@@ -34,9 +35,9 @@ const Card = styled.div`
   align-items: center;
   gap: 2rem;
   padding: 3rem 2.5rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 24px;
+  background: ${theme.colors.overlay};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.radii.xl};
   backdrop-filter: blur(12px);
   max-width: 420px;
   width: 100%;
@@ -53,14 +54,12 @@ const AppName = styled.h1`
   font-size: 2.25rem;
   font-weight: 800;
   letter-spacing: -0.04em;
-  background: linear-gradient(135deg, #48c78e 0%, #3b82f6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: ${theme.colors.primary};
   margin: 0;
 `;
 
 const Tagline = styled.p`
-  color: #6b7280;
+  color: ${theme.colors.textMuted};
   font-size: 0.95rem;
   text-align: center;
   line-height: 1.6;
@@ -70,7 +69,7 @@ const Tagline = styled.p`
 const Divider = styled.div`
   width: 100%;
   height: 1px;
-  background: rgba(255, 255, 255, 0.07);
+  background: ${theme.colors.overlayStrong};
 `;
 
 const GoogleButton = styled.button`
@@ -80,10 +79,10 @@ const GoogleButton = styled.button`
   justify-content: center;
   gap: 0.75rem;
   padding: 0.9rem 1.5rem;
-  background: #fff;
-  color: #111;
+  background: ${theme.colors.text};
+  color: ${theme.colors.onPrimary};
   border: none;
-  border-radius: 12px;
+  border-radius: ${theme.radii.lg};
   font-size: 1rem;
   font-weight: 600;
   font-family: inherit;
@@ -93,7 +92,7 @@ const GoogleButton = styled.button`
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(255, 255, 255, 0.12);
+    box-shadow: 0 8px 24px ${alpha(theme.colors.text, 0.12)};
   }
 
   &:active {
@@ -125,7 +124,7 @@ export default function LoginPage() {
     <PageWrapper>
       <Card>
         <LogoRow>
-          <Utensils size={32} color="#48c78e" />
+          <Utensils size={32} style={{ color: theme.colors.primary }} />
           <AppName>Plenish</AppName>
         </LogoRow>
 

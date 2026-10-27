@@ -5,6 +5,7 @@ import styled from 'styled-components';
 import { updateShareDefault, updateChatPanelSide, updateChatPanelDefaultOpen } from '@/actions/profile';
 import { User } from 'lucide-react';
 import { Card, CardTitle } from '@/components/ui/Card';
+import { theme, alpha } from '@/theme';
 
 const SettingRow = styled.div`
   display: flex;
@@ -16,12 +17,12 @@ const SettingRow = styled.div`
 
 const SettingLabel = styled.div`
   font-size: 0.9rem;
-  color: #d1d5db;
+  color: ${theme.colors.textSecondary};
 `;
 
 const SettingHint = styled.div`
   font-size: 0.775rem;
-  color: #6b7280;
+  color: ${theme.colors.textMuted};
   margin-top: 0.2rem;
 `;
 
@@ -32,10 +33,10 @@ const ToggleGroup = styled.div`
 `;
 
 const ToggleChip = styled.button<{ $active: boolean }>`
-  background: ${({ $active }) => ($active ? 'rgba(59,130,246,0.15)' : 'transparent')};
-  border: 1px solid ${({ $active }) => ($active ? '#3b82f6' : '#333')};
-  color: ${({ $active }) => ($active ? '#93c5fd' : '#6b7280')};
-  border-radius: 20px;
+  background: ${({ $active }) => ($active ? alpha(theme.colors.primary, 0.15) : 'transparent')};
+  border: 1px solid ${({ $active }) => ($active ? theme.colors.primary : theme.colors.border)};
+  color: ${({ $active }) => ($active ? theme.colors.primaryBright : theme.colors.textMuted)};
+  border-radius: ${theme.radii.xl};
   padding: 0.4rem 0.875rem;
   font-size: 0.875rem;
   font-weight: 500;
@@ -44,8 +45,8 @@ const ToggleChip = styled.button<{ $active: boolean }>`
   font-family: inherit;
 
   &:hover:not(:disabled) {
-    border-color: #3b82f6;
-    color: #93c5fd;
+    border-color: ${theme.colors.primary};
+    color: ${theme.colors.primaryBright};
   }
 
   &:disabled {
@@ -57,13 +58,13 @@ const ToggleChip = styled.button<{ $active: boolean }>`
 const SavedText = styled.p`
   margin: 0;
   font-size: 0.775rem;
-  color: #4b5563;
+  color: ${theme.colors.textMuted};
 `;
 
 const ErrorText = styled.p`
   margin: 0;
   font-size: 0.775rem;
-  color: #f87171;
+  color: ${theme.colors.dangerBright};
 `;
 
 interface Props {
@@ -104,7 +105,7 @@ export function ProfileSettings({ initialShareDefault, initialChatPanelSide, ini
   return (
     <Card>
       <CardTitle>
-        <User size={20} color="#a855f7" />
+        <User size={20} style={{ color: theme.colors.violet }} />
         Profile
       </CardTitle>
 

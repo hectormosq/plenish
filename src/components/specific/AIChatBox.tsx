@@ -14,16 +14,17 @@ import styled from 'styled-components';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { MessageSquare, Send } from 'lucide-react';
 import React, { useRef, useEffect } from 'react';
+import { theme } from '@/theme';
 
 const ChatContainer = styled.div`
   display: flex;
   flex-direction: column;
   height: 600px;
-  background-color: #1a1a1a;
-  border: 1px solid #333;
-  border-radius: 16px;
+  background-color: ${theme.colors.surfaceContainer};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.radii.xl};
   padding: 1.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: ${theme.shadows.card};
 `;
 
 const HeaderRow = styled.div`
@@ -31,7 +32,7 @@ const HeaderRow = styled.div`
   align-items: center;
   gap: 0.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid ${theme.colors.border};
   margin-bottom: 1rem;
 `;
 
@@ -50,15 +51,15 @@ const MessageList = styled.div`
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
-    background: #444;
-    border-radius: 4px;
+    background: ${theme.colors.surfaceHighest};
+    border-radius: ${theme.radii.sm};
   }
 `;
 
 const MessageBubble = styled.div<{ $role: 'user' | 'assistant' }>`
   max-width: 80%;
   padding: 1rem;
-  border-radius: 12px;
+  border-radius: ${theme.radii.lg};
   line-height: 1.5;
   font-size: 0.95rem;
 
@@ -66,15 +67,15 @@ const MessageBubble = styled.div<{ $role: 'user' | 'assistant' }>`
     props.$role === 'user'
       ? `
       align-self: flex-end;
-      background-color: #3b82f6;
-      color: white;
+      background-color: ${theme.colors.primary};
+      color: ${theme.colors.onPrimary};
       border-bottom-right-radius: 2px;
     `
       : `
       align-self: flex-start;
-      background-color: #2a2a2a;
-      border: 1px solid #444;
-      color: #e5e5e5;
+      background-color: ${theme.colors.surfaceHigh};
+      border: 1px solid ${theme.colors.borderStrong};
+      color: ${theme.colors.text};
       border-bottom-left-radius: 2px;
     `}
 `;
@@ -87,27 +88,27 @@ const InputForm = styled.form`
 
 const ChatInput = styled.input`
   flex: 1;
-  background-color: #222;
-  border: 1px solid #444;
-  color: #fff;
+  background-color: ${theme.colors.surfaceHigh};
+  border: 1px solid ${theme.colors.borderStrong};
+  color: ${theme.colors.text};
   padding: 1rem;
-  border-radius: 9999px;
+  border-radius: ${theme.radii.full};
   outline: none;
   font-family: inherit;
   font-size: 1rem;
 
   &:focus {
-    border-color: #3b82f6;
+    border-color: ${theme.colors.primary};
   }
   
   &::placeholder {
-    color: #666;
+    color: ${theme.colors.textMuted};
   }
 `;
 
 const SendButton = styled.button`
-  background-color: #3b82f6;
-  color: white;
+  background-color: ${theme.colors.primary};
+  color: ${theme.colors.onPrimary};
   border: none;
   width: 50px;
   height: 50px;
@@ -119,12 +120,13 @@ const SendButton = styled.button`
   transition: transform 0.2s, background-color 0.2s;
 
   &:hover {
-    background-color: #2563eb;
+    background-color: ${theme.colors.primaryHover};
     transform: scale(1.05);
   }
   
   &:disabled {
-    background-color: #444;
+    background-color: ${theme.colors.surfaceHighest};
+    color: ${theme.colors.textMuted};
     cursor: not-allowed;
     transform: none;
   }
@@ -155,8 +157,8 @@ export function AIChatBox() {
   return (
     <ChatContainer>
       <HeaderRow>
-        <MessageSquare size={24} color="#a855f7" />
-        <CardTitle style={{ color: '#a855f7' }}>Plenish Agent</CardTitle>
+        <MessageSquare size={24} style={{ color: theme.colors.violet }} />
+        <CardTitle style={{ color: theme.colors.violet }}>Plenish Agent</CardTitle>
       </HeaderRow>
 
       <MessageList>
@@ -180,7 +182,7 @@ export function AIChatBox() {
         )}
         
         {error && (
-          <div style={{ color: '#ef4444', fontSize: '0.875rem', padding: '1rem', border: '1px solid #ef4444', borderRadius: '8px', marginTop: '0.5rem' }}>
+          <div style={{ color: theme.colors.danger, fontSize: '0.875rem', padding: '1rem', border: `1px solid ${theme.colors.danger}`, borderRadius: theme.radii.md, marginTop: '0.5rem' }}>
             <strong>Error:</strong> {error.message || 'An unknown error occurred while communicating with the AI.'}
           </div>
         )}

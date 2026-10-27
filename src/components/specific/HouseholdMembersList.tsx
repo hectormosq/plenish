@@ -6,6 +6,7 @@ import styled from 'styled-components';
 import { inviteToHousehold, removeMember, leaveHousehold, cancelInvitation } from '@/actions/households';
 import type { HouseholdWithMembers } from '@/actions/households';
 import { UserPlus, UserMinus, LogOut, Crown, User, X } from 'lucide-react';
+import { theme, alpha } from '@/theme';
 
 // ─── Styled Components ────────────────────────────────────────────────────────
 
@@ -13,7 +14,7 @@ const HouseholdName = styled.h3`
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: #f5f5f5;
+  color: ${theme.colors.text};
 `;
 
 const MemberList = styled.ul`
@@ -30,9 +31,9 @@ const MemberRow = styled.li`
   align-items: center;
   justify-content: space-between;
   padding: 0.6rem 0.75rem;
-  background: #222;
-  border-radius: 8px;
-  border: 1px solid #2d2d2d;
+  background: ${theme.colors.surfaceHigh};
+  border-radius: ${theme.radii.md};
+  border: 1px solid ${theme.colors.border};
 `;
 
 const MemberInfo = styled.div`
@@ -40,7 +41,7 @@ const MemberInfo = styled.div`
   align-items: center;
   gap: 0.5rem;
   font-size: 0.9rem;
-  color: #d1d5db;
+  color: ${theme.colors.textSecondary};
 `;
 
 const RoleBadge = styled.span<{ $isAdmin: boolean }>`
@@ -48,32 +49,32 @@ const RoleBadge = styled.span<{ $isAdmin: boolean }>`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: ${({ $isAdmin }) => ($isAdmin ? '#fbbf24' : '#6b7280')};
+  color: ${({ $isAdmin }) => ($isAdmin ? theme.colors.secondary : theme.colors.textMuted)};
 `;
 
 const StatusBadge = styled.span`
   font-size: 0.7rem;
   font-weight: 500;
-  color: #60a5fa;
-  background: rgba(59, 130, 246, 0.1);
-  border-radius: 4px;
+  color: ${theme.colors.primaryBright};
+  background: ${alpha(theme.colors.primary, 0.1)};
+  border-radius: ${theme.radii.sm};
   padding: 0.1rem 0.4rem;
 `;
 
 const IconButton = styled.button`
   background: transparent;
   border: none;
-  color: #6b7280;
+  color: ${theme.colors.textMuted};
   cursor: pointer;
   padding: 0.3rem;
-  border-radius: 6px;
+  border-radius: ${theme.radii.md};
   display: flex;
   align-items: center;
   transition: color 0.2s, background 0.2s;
 
   &:hover {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
+    background: ${alpha(theme.colors.danger, 0.1)};
+    color: ${theme.colors.danger};
   }
 
   &:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -87,32 +88,32 @@ const InviteForm = styled.div`
 
 const EmailInput = styled.input`
   flex: 1;
-  background: #111;
-  border: 1px solid #333;
-  border-radius: 8px;
+  background: ${theme.colors.surface};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.radii.md};
   padding: 0.5rem 0.75rem;
-  color: #f5f5f5;
+  color: ${theme.colors.text};
   font-size: 0.875rem;
 
-  &::placeholder { color: #555; }
-  &:focus { outline: none; border-color: #3b82f6; }
+  &::placeholder { color: ${theme.colors.textMuted}; }
+  &:focus { outline: none; border-color: ${theme.colors.primary}; }
 `;
 
 const InviteButton = styled.button`
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background: #3b82f6;
-  color: #fff;
+  background: ${theme.colors.primary};
+  color: ${theme.colors.onPrimary};
   border: none;
-  border-radius: 8px;
+  border-radius: ${theme.radii.md};
   padding: 0.5rem 0.875rem;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
 
-  &:hover { background: #2563eb; }
+  &:hover { background: ${theme.colors.primaryHover}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -121,9 +122,9 @@ const LeaveButton = styled.button`
   align-items: center;
   gap: 0.4rem;
   background: transparent;
-  color: #9ca3af;
-  border: 1px solid #374151;
-  border-radius: 8px;
+  color: ${theme.colors.textSecondary};
+  border: 1px solid ${theme.colors.borderStrong};
+  border-radius: ${theme.radii.md};
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
@@ -131,12 +132,12 @@ const LeaveButton = styled.button`
   margin-top: 0.5rem;
   transition: color 0.2s, border-color 0.2s;
 
-  &:hover { color: #ef4444; border-color: #ef4444; }
+  &:hover { color: ${theme.colors.danger}; border-color: ${theme.colors.danger}; }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 `;
 
 const ErrorText = styled.p`
-  color: #f87171;
+  color: ${theme.colors.dangerBright};
   font-size: 0.8rem;
   margin: 0;
 `;
@@ -213,7 +214,7 @@ export function HouseholdMembersList({ household }: Props) {
         {household.members.map((member) => (
           <MemberRow key={member.id}>
             <MemberInfo>
-              {member.role === 'admin' ? <Crown size={14} color="#fbbf24" /> : <User size={14} color="#6b7280" />}
+              {member.role === 'admin' ? <Crown size={14} style={{ color: theme.colors.secondary }} /> : <User size={14} style={{ color: theme.colors.textMuted }} />}
               <span>{member.display_name ?? member.invited_email ?? 'Unknown'}</span>
               <RoleBadge $isAdmin={member.role === 'admin'}>{member.role}</RoleBadge>
               {member.status === 'pending' && <StatusBadge>pending</StatusBadge>}

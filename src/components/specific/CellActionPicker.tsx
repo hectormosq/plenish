@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import styled from 'styled-components';
 import type { MealType } from '@/actions/meals';
+import { theme, alpha } from '@/theme';
 
 // ─── Styled Components ────────────────────────────────────────────────────────
 
@@ -15,20 +16,20 @@ const Overlay = styled.div`
 const Card = styled.div`
   position: fixed;
   z-index: 50;
-  background: #1e1e1e;
-  border: 1px solid #333;
-  border-radius: 12px;
+  background: ${theme.colors.surfaceContainer};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.radii.lg};
   padding: 1rem;
   min-width: 180px;
   max-width: 240px;
   width: max-content;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: ${theme.shadows.popover};
 `;
 
 const CardTitle = styled.p`
   font-size: 0.7rem;
   font-weight: 600;
-  color: #555;
+  color: ${theme.colors.textMuted};
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin: 0 0 0.75rem 0;
@@ -43,12 +44,12 @@ const ActionList = styled.div`
 const ActionButton = styled.button<{ $primary?: boolean }>`
   width: 100%;
   background: ${({ $primary }) =>
-    $primary ? 'rgba(59, 130, 246, 0.12)' : 'rgba(255, 255, 255, 0.04)'};
+    $primary ? alpha(theme.colors.primary, 0.12) : theme.colors.overlay};
   border: 1px solid
     ${({ $primary }) =>
-      $primary ? 'rgba(59, 130, 246, 0.35)' : 'rgba(255, 255, 255, 0.08)'};
-  color: ${({ $primary }) => ($primary ? '#60a5fa' : '#9ca3af')};
-  border-radius: 8px;
+      $primary ? alpha(theme.colors.primary, 0.35) : theme.colors.border};
+  color: ${({ $primary }) => ($primary ? theme.colors.primaryBright : theme.colors.textSecondary)};
+  border-radius: ${theme.radii.md};
   padding: 0.5rem 0.75rem;
   font-size: 0.8rem;
   font-weight: 500;
@@ -59,10 +60,10 @@ const ActionButton = styled.button<{ $primary?: boolean }>`
 
   &:hover {
     background: ${({ $primary }) =>
-      $primary ? 'rgba(59, 130, 246, 0.22)' : 'rgba(255, 255, 255, 0.08)'};
+      $primary ? alpha(theme.colors.primary, 0.22) : theme.colors.overlayStrong};
     border-color: ${({ $primary }) =>
-      $primary ? 'rgba(59, 130, 246, 0.55)' : 'rgba(255, 255, 255, 0.15)'};
-    color: ${({ $primary }) => ($primary ? '#93c5fd' : '#d1d5db')};
+      $primary ? alpha(theme.colors.primary, 0.55) : theme.colors.borderStrong};
+    color: ${({ $primary }) => ($primary ? theme.colors.primaryBright : theme.colors.textSecondary)};
   }
 `;
 

@@ -14,6 +14,7 @@ import { logMeal, MealType } from '@/actions/meals';
 import type { HouseholdMemberSimple } from '@/actions/households';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { PlusCircle, Loader2, Users } from 'lucide-react';
+import { theme, alpha } from '@/theme';
 
 const FormContainer = styled.form`
   display: flex;
@@ -30,37 +31,37 @@ const InputGroup = styled.div`
 
 const Label = styled.label`
   font-size: 0.875rem;
-  color: #a3a3a3;
+  color: ${theme.colors.textSecondary};
   font-weight: 500;
 `;
 
 const TextInput = styled.input`
-  background-color: #222;
-  border: 1px solid #333;
-  color: #fff;
+  background-color: ${theme.colors.surfaceHigh};
+  border: 1px solid ${theme.colors.border};
+  color: ${theme.colors.text};
   padding: 0.875rem 1rem;
-  border-radius: 8px;
+  border-radius: ${theme.radii.md};
   font-family: inherit;
   font-size: 1rem;
   transition: all 0.2s ease;
 
   &:focus {
     outline: none;
-    border-color: #10b981;
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    border-color: ${theme.colors.primary};
+    box-shadow: ${theme.shadows.focus};
   }
 
   &::placeholder {
-    color: #555;
+    color: ${theme.colors.textMuted};
   }
 `;
 
 const SelectInput = styled.select`
-  background-color: #222;
-  border: 1px solid #333;
-  color: #fff;
+  background-color: ${theme.colors.surfaceHigh};
+  border: 1px solid ${theme.colors.border};
+  color: ${theme.colors.text};
   padding: 0.875rem 1rem;
-  border-radius: 8px;
+  border-radius: ${theme.radii.md};
   font-family: inherit;
   font-size: 1rem;
   appearance: none;
@@ -68,7 +69,7 @@ const SelectInput = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #10b981;
+    border-color: ${theme.colors.primary};
   }
 `;
 
@@ -78,11 +79,11 @@ const spin = keyframes`
 `;
 
 const SubmitButton = styled.button<{ $loading?: boolean }>`
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
+  background: linear-gradient(135deg, ${theme.colors.primary} 0%, ${theme.colors.primaryHover} 100%);
+  color: ${theme.colors.onPrimary};
   border: none;
   padding: 0.875rem;
-  border-radius: 8px;
+  border-radius: ${theme.radii.md};
   font-weight: 600;
   cursor: pointer;
   display: flex;
@@ -93,7 +94,7 @@ const SubmitButton = styled.button<{ $loading?: boolean }>`
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 4px 12px ${alpha(theme.colors.primary, 0.3)};
   }
 
   ${props => props.$loading && css`
@@ -113,10 +114,10 @@ const ShareToggle = styled.button<{ $active: boolean }>`
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background: ${({ $active }) => ($active ? 'rgba(59,130,246,0.15)' : 'transparent')};
-  border: 1px solid ${({ $active }) => ($active ? '#3b82f6' : '#333')};
-  color: ${({ $active }) => ($active ? '#93c5fd' : '#6b7280')};
-  border-radius: 8px;
+  background: ${({ $active }) => ($active ? alpha(theme.colors.primary, 0.15) : 'transparent')};
+  border: 1px solid ${({ $active }) => ($active ? theme.colors.primary : theme.colors.border)};
+  color: ${({ $active }) => ($active ? theme.colors.primaryBright : theme.colors.textMuted)};
+  border-radius: ${theme.radii.md};
   padding: 0.45rem 0.875rem;
   font-size: 0.8rem;
   font-weight: 500;
@@ -124,7 +125,7 @@ const ShareToggle = styled.button<{ $active: boolean }>`
   transition: all 0.2s;
   font-family: inherit;
 
-  &:hover { border-color: #3b82f6; color: #93c5fd; }
+  &:hover { border-color: ${theme.colors.primary}; color: ${theme.colors.primaryBright}; }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 `;
 
@@ -140,13 +141,13 @@ const MemberCheckRow = styled.label`
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
-  color: #d1d5db;
+  color: ${theme.colors.textSecondary};
   cursor: pointer;
   padding: 0.3rem 0.5rem;
-  border-radius: 6px;
-  background: #1a1a1a;
+  border-radius: ${theme.radii.md};
+  background: ${theme.colors.surfaceContainer};
 
-  input[type='checkbox'] { accent-color: #3b82f6; }
+  input[type='checkbox'] { accent-color: ${theme.colors.primary}; }
 `;
 
 interface LogMealFormProps {
@@ -197,12 +198,12 @@ export function LogMealForm({ householdMembers = [], householdId = null }: LogMe
   return (
     <Card>
       <CardTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <PlusCircle size={20} color="#10b981" />
+        <PlusCircle size={20} style={{ color: theme.colors.primary }} />
         Log a Meal
       </CardTitle>
       
       {errorMsg && (
-        <div style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '1rem' }}>
+        <div style={{ color: theme.colors.danger, fontSize: '0.875rem', marginTop: '1rem' }}>
           {errorMsg}
         </div>
       )}

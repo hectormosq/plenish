@@ -11,6 +11,7 @@ import { confirmMealDraft, updateMealIngredients } from '@/actions/meal-drafts';
 import { t } from '@/lib/i18n';
 import type { MessageKey } from '@/lib/i18n';
 import type { MealDraft, QuantitySource } from '@/lib/ai/log-v2/schemas';
+import { theme } from '@/theme';
 
 // ─── Styles ────────────────────────────────────────────────────────────────
 
@@ -23,8 +24,8 @@ const Wrapper = styled.div`
 `;
 
 const DishBlock = styled.div`
-  border: 1px solid #3a3a3a;
-  border-radius: 10px;
+  border: 1px solid ${theme.colors.borderStrong};
+  border-radius: ${theme.radii.lg};
   overflow: hidden;
 `;
 
@@ -34,16 +35,16 @@ const DishHeader = styled.div`
   align-items: baseline;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  background: #232323;
+  background: ${theme.colors.surfaceHigh};
   font-weight: 600;
   font-size: 0.9rem;
-  color: #f5f5f5;
+  color: ${theme.colors.text};
 `;
 
 const DishNote = styled.span`
   font-weight: 400;
   font-size: 0.72rem;
-  color: #8a8a8a;
+  color: ${theme.colors.textMuted};
 `;
 
 const Row = styled.div`
@@ -52,17 +53,17 @@ const Row = styled.div`
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.75rem;
-  border-top: 1px solid #2c2c2c;
+  border-top: 1px solid ${theme.colors.border};
   font-size: 0.85rem;
 `;
 
 const Name = styled.span`
   overflow-wrap: anywhere;
-  color: #e5e5e5;
+  color: ${theme.colors.text};
 `;
 
 const Grams = styled.span`
-  color: #cfcfcf;
+  color: ${theme.colors.textSecondary};
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 `;
@@ -70,13 +71,13 @@ const Grams = styled.span`
 const TextInput = styled.input`
   width: 100%;
   min-width: 0;
-  background: #1a1a1a;
-  border: 1px solid #444;
-  border-radius: 6px;
-  color: #f5f5f5;
+  background: ${theme.colors.surfaceContainer};
+  border: 1px solid ${theme.colors.borderStrong};
+  border-radius: ${theme.radii.md};
+  color: ${theme.colors.text};
   padding: 0.3rem 0.45rem;
   font-size: 0.85rem;
-  &:focus { outline: none; border-color: #3b82f6; }
+  &:focus { outline: none; border-color: ${theme.colors.primary}; }
 `;
 
 const GramsInput = styled(TextInput)`
@@ -92,12 +93,12 @@ const IconButton = styled.button`
   display: inline-flex;
   background: transparent;
   border: none;
-  color: #8a8a8a;
+  color: ${theme.colors.textMuted};
   cursor: pointer;
   padding: 0.2rem;
-  border-radius: 6px;
+  border-radius: ${theme.radii.md};
   transition: color 0.15s ease, background 0.15s ease;
-  &:hover { color: #fca5a5; background: #2f2f2f; }
+  &:hover { color: ${theme.colors.dangerBright}; background: ${theme.colors.surfaceHigh}; }
 `;
 
 const Actions = styled.div`
@@ -108,7 +109,7 @@ const Actions = styled.div`
 `;
 
 const ErrorText = styled.span`
-  color: #fca5a5;
+  color: ${theme.colors.dangerBright};
   font-size: 0.8rem;
 `;
 

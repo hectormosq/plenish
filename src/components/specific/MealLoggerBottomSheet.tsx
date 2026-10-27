@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import { X } from 'lucide-react';
+import { theme, alpha } from '@/theme';
 
 // ─── Animations ───────────────────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ const Backdrop = styled.div<{ $visible: boolean }>`
   position: fixed;
   inset: 0;
   z-index: 150;
-  background: rgba(0, 0, 0, 0.6);
+  background: ${alpha(theme.colors.shadow, 0.6)};
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   animation: ${fadeIn} 0.2s ease forwards;
@@ -46,9 +47,9 @@ const Sheet = styled.div<{ $closing: boolean }>`
   right: 0;
   z-index: 200;
   height: 90vh;
-  background: #111;
-  border-radius: 20px 20px 0 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: ${theme.colors.surface};
+  border-radius: ${theme.radii.xl} ${theme.radii.xl} 0 0;
+  border-top: 1px solid ${theme.colors.border};
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -67,8 +68,8 @@ const Sheet = styled.div<{ $closing: boolean }>`
 const SheetHandle = styled.div`
   width: 36px;
   height: 4px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 2px;
+  background: ${alpha(theme.colors.text, 0.2)};
+  border-radius: ${theme.radii.sm};
   margin: 12px auto 0;
   flex-shrink: 0;
 `;
@@ -82,9 +83,9 @@ const SheetHeader = styled.div`
 `;
 
 const CloseButton = styled.button`
-  background: rgba(255, 255, 255, 0.07);
+  background: ${theme.colors.overlayStrong};
   border: none;
-  color: #aaa;
+  color: ${theme.colors.textSecondary};
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -96,8 +97,8 @@ const CloseButton = styled.button`
   flex-shrink: 0;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: #f0f0f0;
+    background: ${alpha(theme.colors.text, 0.12)};
+    color: ${theme.colors.text};
   }
 `;
 
@@ -115,8 +116,8 @@ const SheetBody = styled.div`
     width: 4px;
   }
   &::-webkit-scrollbar-thumb {
-    background: #333;
-    border-radius: 4px;
+    background: ${theme.colors.surfaceHighest};
+    border-radius: ${theme.radii.sm};
   }
 `;
 
