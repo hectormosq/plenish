@@ -28,7 +28,7 @@ const MealItem = styled.div`
   gap: 0.75rem;
   transition: border-color 0.2s;
 
-  &:hover { border-color: ${theme.colors.border}; }
+  &:hover { border-color: ${theme.colors.borderStrong}; }
 `;
 
 const MealInfo = styled.div`
@@ -51,10 +51,7 @@ const MealTypeBadge = styled.span<{ $type: string }>`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: ${({ $type }) =>
-    $type === 'breakfast' ? theme.colors.secondary :
-    $type === 'lunch'     ? theme.colors.primaryBright :
-    $type === 'dinner'    ? theme.colors.indigo : theme.colors.violet};
+  color: ${({ $type }) => theme.meal[$type as keyof typeof theme.meal] ?? theme.meal.snack};
 `;
 
 const SharedBadge = styled.span`

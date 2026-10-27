@@ -319,7 +319,7 @@ const FAB = styled.button`
   border-radius: 50%;
   background: linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary});
   border: none;
-  color: ${theme.colors.text};
+  color: ${theme.colors.onPrimary};
   display: flex;
   align-items: center;
   justify-content: center;

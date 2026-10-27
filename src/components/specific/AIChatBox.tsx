@@ -68,7 +68,7 @@ const MessageBubble = styled.div<{ $role: 'user' | 'assistant' }>`
       ? `
       align-self: flex-end;
       background-color: ${theme.colors.primary};
-      color: white;
+      color: ${theme.colors.onPrimary};
       border-bottom-right-radius: 2px;
     `
       : `
@@ -108,7 +108,7 @@ const ChatInput = styled.input`
 
 const SendButton = styled.button`
   background-color: ${theme.colors.primary};
-  color: white;
+  color: ${theme.colors.onPrimary};
   border: none;
   width: 50px;
   height: 50px;
@@ -126,6 +126,7 @@ const SendButton = styled.button`
   
   &:disabled {
     background-color: ${theme.colors.surfaceHighest};
+    color: ${theme.colors.textMuted};
     cursor: not-allowed;
     transform: none;
   }

@@ -139,7 +139,7 @@ export function RecentMealsList({ meals }: { meals: MealLog[] }) {
               <MealItem key={meal.id}>
                 <MealInfo>
                   <MealHeader>
-                    <span style={{ color: meal.meal_type === 'breakfast' ? theme.colors.secondary : meal.meal_type === 'lunch' ? theme.colors.primaryBright : meal.meal_type === 'dinner' ? theme.colors.indigo : theme.colors.violet }}>
+                    <span style={{ color: theme.meal[meal.meal_type as keyof typeof theme.meal] ?? theme.meal.snack }}>
                       ● {meal.meal_type}
                     </span>
                     <span>• {formattedDate}</span>

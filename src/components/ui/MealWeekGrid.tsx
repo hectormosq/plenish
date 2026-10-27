@@ -61,13 +61,6 @@ const MEAL_LABELS: Record<MealType, string> = {
   dinner: 'Dinner',
 };
 
-const MEAL_COLOR: Record<MealType, string> = {
-  breakfast: theme.colors.secondary,
-  snack:     theme.colors.violet,
-  lunch:     theme.colors.primaryBright,
-  dinner:    theme.colors.indigo,
-};
-
 const MEAL_BG: Record<MealType, string> = {
   breakfast: alpha(theme.colors.secondary, 0.1),
   snack:     alpha(theme.colors.violet, 0.1),
@@ -1031,8 +1024,8 @@ export function MealWeekGrid({
         {/* Meal type rows */}
         {MEAL_TYPES.map((mealType) => (
           <React.Fragment key={mealType}>
-            <RowLabel $color={MEAL_COLOR[mealType]}>
-              <LabelText $color={MEAL_COLOR[mealType]}>{MEAL_LABELS[mealType]}</LabelText>
+            <RowLabel $color={theme.meal[mealType]}>
+              <LabelText $color={theme.meal[mealType]}>{MEAL_LABELS[mealType]}</LabelText>
             </RowLabel>
 
             {visibleDays.map((day) => {
@@ -1104,7 +1097,7 @@ export function MealWeekGrid({
                     $filled
                     $bg={PLANNED_BG[mealType]}
                     $planned
-                    $planColor={MEAL_COLOR[mealType]}
+                    $planColor={theme.meal[mealType]}
                   >
                     <CellBody>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.2rem' }}>

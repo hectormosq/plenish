@@ -109,7 +109,7 @@ const ConfirmButton = styled.button`
   width: 100%;
   margin-top: 0.75rem;
   background: ${theme.colors.primary};
-  color: white;
+  color: ${theme.colors.onPrimary};
   border: none;
   border-radius: ${theme.radii.md};
   padding: 0.5rem 1rem;

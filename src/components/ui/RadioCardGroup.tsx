@@ -63,7 +63,7 @@ const Dot = styled.span<{ $active: boolean }>`
   margin-top: 0.15rem;
   border-radius: 50%;
   border: 2px solid ${({ $active }) => ($active ? theme.colors.primary : theme.colors.borderStrong)};
-  box-shadow: inset 0 0 0 3px ${theme.colors.border};
+  box-shadow: inset 0 0 0 3px ${theme.colors.surfaceContainer};
   background: ${({ $active }) => ($active ? theme.colors.primary : 'transparent')};
   transition: all 0.15s;
 `;

@@ -80,7 +80,7 @@ const spin = keyframes`
 
 const SubmitButton = styled.button<{ $loading?: boolean }>`
   background: linear-gradient(135deg, ${theme.colors.primary} 0%, ${theme.colors.primaryHover} 100%);
-  color: white;
+  color: ${theme.colors.onPrimary};
   border: none;
   padding: 0.875rem;
   border-radius: ${theme.radii.md};

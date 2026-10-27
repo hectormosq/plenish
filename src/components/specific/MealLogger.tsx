@@ -60,7 +60,7 @@ const MessageBubble = styled.div<{ $role: 'user' | 'assistant'; $wide?: boolean 
       ? `
       align-self: flex-end;
       background-color: ${theme.colors.primary};
-      color: white;
+      color: ${theme.colors.onPrimary};
       border-bottom-right-radius: 2px;
     `
       : `
@@ -126,7 +126,7 @@ const HiddenDateInput = styled.input`
 const MealTypeChip = styled.button<{ $active: boolean }>`
   background: ${({ $active }) => ($active ? theme.colors.primary : 'transparent')};
   border: 1px solid ${({ $active }) => ($active ? theme.colors.primary : theme.colors.border)};
-  color: ${({ $active }) => ($active ? theme.colors.text : theme.colors.textSecondary)};
+  color: ${({ $active }) => ($active ? theme.colors.onPrimary : theme.colors.textSecondary)};
   padding: 0.5rem 1rem;
   border-radius: ${theme.radii.xl};
   font-size: 0.875rem;
@@ -137,7 +137,7 @@ const MealTypeChip = styled.button<{ $active: boolean }>`
 
   &:hover:not(:disabled) {
     border-color: ${theme.colors.primary};
-    color: ${({ $active }) => ($active ? theme.colors.text : theme.colors.primary)};
+    color: ${({ $active }) => ($active ? theme.colors.onPrimary : theme.colors.primary)};
   }
 
   &:disabled {
@@ -192,7 +192,7 @@ const ChatTextarea = styled.textarea`
 
 const SendButton = styled.button`
   background-color: ${theme.colors.primary};
-  color: white;
+  color: ${theme.colors.onPrimary};
   border: none;
   width: 50px;
   height: 50px;
@@ -211,6 +211,7 @@ const SendButton = styled.button`
 
   &:disabled {
     background-color: ${theme.colors.surfaceHighest};
+    color: ${theme.colors.textMuted};
     cursor: not-allowed;
     transform: none;
   }

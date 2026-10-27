@@ -46,7 +46,7 @@ export const theme = {
   meal: {
     breakfast: colors.secondary,
     snack:     colors.violet,
-    lunch:     colors.primary,
+    lunch:     colors.primaryBright,
     dinner:    colors.indigo,
   },
   radii: {
