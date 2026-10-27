@@ -31,7 +31,7 @@ Automatically managed by Supabase Auth (`auth.users`), but we track public profi
 - `id` (uuid) PK
 - `user_id` (uuid) references `public.users`
 - `log_text` (text) (e.g., "Ate some Tacos al Pastor and a bit of Cochinita Pibil")
-- `meal_type` (varchar) ('breakfast', 'lunch', 'dinner', 'snack')
+- `meal_type` (varchar) ('breakfast', 'mid_morning_snack', 'lunch', 'afternoon_snack', 'dinner'). Until migration 00012 the two snacks were a single `'snack'`.
 - `recipe_ids` (uuid[]) – Pointers to `public.recipes`. Populated when user confirms a recipe link.
 - `nutrition` (jsonb, nullable) – Sparse structured compliance data extracted at log time. Shape:
   ```json
@@ -88,7 +88,7 @@ Automatically managed by Supabase Auth (`auth.users`), but we track public profi
 **Purpose:** Represents an AI-recommended meal slot for a specific date and meal type. Created by the meal planner feature and displayed on the weekly calendar.
 - `id` (uuid) PK
 - `user_id` (uuid) references `public.users`
-- `meal_type` (text) — `'breakfast'`, `'lunch'`, `'dinner'`, `'snack'`
+- `meal_type` (text) — `'breakfast'`, `'mid_morning_snack'`, `'lunch'`, `'afternoon_snack'`, `'dinner'`
 - `planned_date` (date) — the date this meal is planned for
 - `name` (text) — AI-generated meal name (e.g., "Pollo a la plancha con ensalada")
 - `description` (text, nullable) — short meal description

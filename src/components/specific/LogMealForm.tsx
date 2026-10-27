@@ -15,6 +15,8 @@ import type { HouseholdMemberSimple } from '@/actions/households';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { PlusCircle, Loader2, Users } from 'lucide-react';
 import { theme, alpha } from '@/theme';
+import { MEAL_TYPES } from '@/lib/meal-types';
+import { t } from '@/lib/i18n';
 
 const FormContainer = styled.form`
   display: flex;
@@ -217,10 +219,9 @@ export function LogMealForm({ householdMembers = [], householdId = null }: LogMe
             onChange={e => setMealType(e.target.value as MealType)}
             disabled={isPending}
           >
-            <option value="breakfast">Breakfast</option>
-            <option value="lunch">Lunch</option>
-            <option value="dinner">Dinner</option>
-            <option value="snack">Snack</option>
+            {MEAL_TYPES.map((type) => (
+              <option key={type} value={type}>{t('en', `mealSlot.${type}`)}</option>
+            ))}
           </SelectInput>
         </InputGroup>
 

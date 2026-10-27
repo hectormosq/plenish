@@ -12,12 +12,13 @@ import { buildChatTurn, turnLoopSettings } from '@/lib/ai/chat-turn';
 import type { LogContext } from '@/lib/ai/log-context';
 import type { MealToSave } from '@/lib/ai/tools/meal-tools';
 import { createFakeSupabase, EVAL_HOUSEHOLD, EVAL_USER_ID } from './lib/fake-supabase';
+import type { MealType } from '@/lib/meal-types';
 import { printPassRates, saveResults } from './lib/report';
 
 interface LoggingCase {
   id: string;
   text: string;
-  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  mealType: MealType;
   date: string;
   shareState: 'all' | 'partial' | 'just-me';
 }

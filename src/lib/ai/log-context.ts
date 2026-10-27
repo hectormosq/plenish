@@ -1,7 +1,10 @@
 import { z } from 'zod';
+import { MealTypeEnum } from '@/lib/meal-types';
 
-export const MealTypeEnum = z.enum(['breakfast', 'lunch', 'dinner', 'snack']);
-export type MealTypeValue = z.infer<typeof MealTypeEnum>;
+import type { MealType as MealTypeValue } from '@/lib/meal-types';
+
+export { MealTypeEnum };
+export type { MealTypeValue };
 
 // ---------------------------------------------------------------------------
 // LogContext — values the logging form already knows.

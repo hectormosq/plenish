@@ -6,6 +6,7 @@ import styled from 'styled-components';
 import { deleteMeal, dismissSharedMeal, type MealType } from '@/actions/meals';
 import { getCalendarMeals } from '@/actions/calendar';
 import { Alert } from '@/components/ui/Alert';
+import { MEAL_TYPES } from '@/lib/meal-types';
 import { t } from '@/lib/i18n';
 import type { Lang } from '@/lib/i18n';
 import {
@@ -52,27 +53,20 @@ export interface CalendarMeal {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MEAL_TYPES: MealType[] = ['breakfast', 'snack', 'lunch', 'dinner'];
-
-const MEAL_LABELS: Record<MealType, string> = {
-  breakfast: 'Breakfast',
-  snack: 'Snack',
-  lunch: 'Lunch',
-  dinner: 'Dinner',
-};
-
 const MEAL_BG: Record<MealType, string> = {
-  breakfast: alpha(theme.colors.secondary, 0.1),
-  snack:     alpha(theme.colors.violet, 0.1),
-  lunch:     alpha(theme.colors.primary, 0.1),
-  dinner:    alpha(theme.colors.indigo, 0.1),
+  breakfast:         alpha(theme.colors.secondary, 0.1),
+  mid_morning_snack: alpha(theme.colors.tertiary, 0.1),
+  lunch:             alpha(theme.colors.primary, 0.1),
+  afternoon_snack:   alpha(theme.colors.violet, 0.1),
+  dinner:            alpha(theme.colors.indigo, 0.1),
 };
 
 const PLANNED_BG: Record<MealType, string> = {
-  breakfast: alpha(theme.colors.secondary, 0.05),
-  snack:     alpha(theme.colors.violet, 0.05),
-  lunch:     alpha(theme.colors.primary, 0.05),
-  dinner:    alpha(theme.colors.indigo, 0.05),
+  breakfast:         alpha(theme.colors.secondary, 0.05),
+  mid_morning_snack: alpha(theme.colors.tertiary, 0.05),
+  lunch:             alpha(theme.colors.primary, 0.05),
+  afternoon_snack:   alpha(theme.colors.violet, 0.05),
+  dinner:            alpha(theme.colors.indigo, 0.05),
 };
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -1025,7 +1019,7 @@ export function MealWeekGrid({
         {MEAL_TYPES.map((mealType) => (
           <React.Fragment key={mealType}>
             <RowLabel $color={theme.meal[mealType]}>
-              <LabelText $color={theme.meal[mealType]}>{MEAL_LABELS[mealType]}</LabelText>
+              <LabelText $color={theme.meal[mealType]}>{t(lang, `mealSlot.${mealType}`)}</LabelText>
             </RowLabel>
 
             {visibleDays.map((day) => {

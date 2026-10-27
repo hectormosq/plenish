@@ -27,10 +27,18 @@ export const es = {
   'logV2.actions.remove':      'Quitar',
   'logV2.actions.addIngredient': 'Añadir ingrediente',
 
-  'mealType.breakfast': 'desayuno',
-  'mealType.lunch':     'almuerzo',
-  'mealType.dinner':    'cena',
-  'mealType.snack':     'merienda',
+  'mealType.breakfast':         'desayuno',
+  'mealType.mid_morning_snack': 'media mañana',
+  'mealType.lunch':             'comida',
+  'mealType.afternoon_snack':   'merienda',
+  'mealType.dinner':            'cena',
+
+  // Slot titles (calendar rows, chips)
+  'mealSlot.breakfast':         'Desayuno',
+  'mealSlot.mid_morning_snack': 'Media mañana',
+  'mealSlot.lunch':             'Comida',
+  'mealSlot.afternoon_snack':   'Merienda',
+  'mealSlot.dinner':            'Cena',
 
   // ── Preferences page ───────────────────────────────────────────────────
   'preferences.nav':               'Preferencias',

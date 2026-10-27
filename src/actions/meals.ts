@@ -4,7 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import type { MealNutrition } from '@/lib/ai/nutrition-schemas';
 
-export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+export type { MealType } from '@/lib/meal-types';
+import type { MealType } from '@/lib/meal-types';
 
 export interface MealLog {
   id: string;

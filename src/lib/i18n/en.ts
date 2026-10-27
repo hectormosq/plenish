@@ -28,10 +28,17 @@ export const en: Record<MessageKey, string> = {
   'logV2.actions.remove':      'Remove',
   'logV2.actions.addIngredient': 'Add ingredient',
 
-  'mealType.breakfast': 'breakfast',
-  'mealType.lunch':     'lunch',
-  'mealType.dinner':    'dinner',
-  'mealType.snack':     'snack',
+  'mealType.breakfast':         'breakfast',
+  'mealType.mid_morning_snack': 'mid-morning snack',
+  'mealType.lunch':             'lunch',
+  'mealType.afternoon_snack':   'afternoon snack',
+  'mealType.dinner':            'dinner',
+
+  'mealSlot.breakfast':         'Breakfast',
+  'mealSlot.mid_morning_snack': 'Mid-morning',
+  'mealSlot.lunch':             'Lunch',
+  'mealSlot.afternoon_snack':   'Afternoon snack',
+  'mealSlot.dinner':            'Dinner',
 
   'preferences.nav':               'Preferences',
   'preferences.title':             'Preferences',

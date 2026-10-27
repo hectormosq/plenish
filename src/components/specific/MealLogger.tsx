@@ -15,6 +15,8 @@ import { draftOfPart } from '@/lib/ai/log-v2/draft-parts';
 import { buildReply } from '@/lib/ai/log-v2/reply';
 import type { MealDraft, PlenishUIMessage } from '@/lib/ai/log-v2/schemas';
 import { theme, alpha } from '@/theme';
+import { MEAL_TYPES } from '@/lib/meal-types';
+import { t } from '@/lib/i18n';
 
 // ─── Styled Components (from AIChatBox) ────────────────────────────────────
 
@@ -293,18 +295,9 @@ interface MealLoggerProps {
   initialDate?: string;
 }
 
-const MEAL_TYPES = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
-
-const MEAL_LABELS_ES: Record<string, string> = {
-  breakfast: 'desayuno',
-  snack: 'merienda',
-  lunch: 'almuerzo',
-  dinner: 'cena',
-};
-
-function buildIntroMessage(initialMealType?: string, initialDate?: string): string {
+function buildIntroMessage(initialMealType?: MealType, initialDate?: string): string {
   if (initialMealType) {
-    const mealLabel = MEAL_LABELS_ES[initialMealType] ?? initialMealType;
+    const mealLabel = t('es', `mealType.${initialMealType}`);
     const datePart = initialDate ? ` del ${initialDate}` : '';
     return `¡Hola! Vamos a registrar tu ${mealLabel}${datePart}. ¿Qué comiste?`;
   }
@@ -614,7 +607,7 @@ export function MealLogger({
             type="button"
             title={selectedMealType === type ? 'Click to deselect' : `Log as ${type}`}
           >
-            {type.charAt(0).toUpperCase() + type.slice(1)}
+            {t('es', `mealSlot.${type}`)}
             {selectedMealType === type && <X size={12} style={{ marginLeft: '4px' }} />}
           </MealTypeChip>
         ))}

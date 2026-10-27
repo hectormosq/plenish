@@ -332,7 +332,7 @@ function formatPortionDefaults(sizes: Record<string, { category: string }>): str
 export function formatMealRules(profile: DietProfile): string {
   return `- Lunch/dinner must cover 3 groups: Vitaminas (vegetables, fruit, greens) + Proteínas (meat, fish, eggs, legumes) + Hidratos (pasta, potato, rice; prefer whole grain)
 - Breakfast: 1 dairy + 1 fruit + 1 whole grain
-- Snack: dairy + fruit OR small sandwich
+- Mid-morning snack and afternoon snack (merienda): dairy + fruit OR small sandwich
 - Protein rotation (weekly cycle): ${profile.restrictions.protein_rotation.join(' → ')}
 - No same dish within ${profile.restrictions.no_repeat_hours}h
 - Occasional only: ${profile.restrictions.occasional_foods.join(', ')}`;

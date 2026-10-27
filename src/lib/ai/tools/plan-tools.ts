@@ -2,9 +2,8 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { planSingleSlot, planWeekSlots, getPlannedMeals } from '@/actions/plans';
-import type { MealType } from '@/actions/meals';
-
-const MEAL_TYPES: MealType[] = ['breakfast', 'snack', 'lunch', 'dinner'];
+import { MEAL_TYPES, MealTypeEnum } from '@/lib/meal-types';
+import type { MealType } from '@/lib/meal-types';
 
 function getWeekBounds(): { start: string; end: string } {
   const now = new Date();
@@ -27,7 +26,7 @@ return tool({
     slots: z
       .array(
         z.object({
-          mealType: z.enum(['breakfast', 'snack', 'lunch', 'dinner']),
+          mealType: MealTypeEnum,
           date: z.string().describe('YYYY-MM-DD'),
         }),
       )

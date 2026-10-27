@@ -1,3 +1,6 @@
+import { MEAL_TYPES } from '@/lib/meal-types';
+import type { MealType } from '@/lib/meal-types';
+
 // ─── Types (T001) ──────────────────────────────────────────────────────────
 
 export type MessageIntent = 'logging' | 'management' | 'recommendation' | 'ambiguous';
@@ -10,8 +13,8 @@ export interface ParsedMessage {
   prefixes: {
     /** ISO date string from [date: YYYY-MM-DD] prefix, if present */
     date?: string;
-    /** Meal type from [breakfast] / [lunch] / [dinner] / [snack] prefix, if present */
-    mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+    /** Meal type from a [breakfast] / [mid_morning_snack] / … prefix, if present */
+    mealType?: MealType;
   };
 }
 
@@ -32,15 +35,13 @@ function normalise(text: string): string {
 
 // ─── Prefix parser (T002) ───────────────────────────────────────────────────
 
-const MEAL_TYPE_VALUES = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
-
 /**
  * Strips UI-generated bracket prefixes from a raw chat message before intent
  * classification so they don't influence the signal matching.
  *
  * Recognised prefixes:
  *   [date: YYYY-MM-DD]  →  prefixes.date
- *   [breakfast|lunch|dinner|snack]  →  prefixes.mealType
+ *   [<meal type>]  →  prefixes.mealType
  */
 export function parseMessagePrefixes(raw: string): ParsedMessage {
   const prefixes: ParsedMessage['prefixes'] = {};
@@ -53,11 +54,11 @@ export function parseMessagePrefixes(raw: string): ParsedMessage {
     cleanText = cleanText.replace(dateMatch[0], '').trim();
   }
 
-  // [breakfast|lunch|dinner|snack]
-  const mealMatch = /\[(breakfast|lunch|dinner|snack)\]/i.exec(cleanText);
+  // [<meal type>]
+  const mealMatch = new RegExp(`\\[(${MEAL_TYPES.join('|')})\\]`, 'i').exec(cleanText);
   if (mealMatch) {
     const candidate = mealMatch[1].toLowerCase();
-    if ((MEAL_TYPE_VALUES as readonly string[]).includes(candidate)) {
+    if ((MEAL_TYPES as readonly string[]).includes(candidate)) {
       prefixes.mealType = candidate as ParsedMessage['prefixes']['mealType'];
     }
     cleanText = cleanText.replace(mealMatch[0], '').trim();
