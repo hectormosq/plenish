@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import styled from 'styled-components';
 import { Home, ClipboardList, UtensilsCrossed, Settings } from 'lucide-react';
+import { theme, alpha } from '@/theme';
 
 // ─── Styled Components ────────────────────────────────────────────────────────
 
@@ -16,10 +17,10 @@ const Nav = styled.nav`
   right: 0;
   z-index: 100;
   height: 60px;
-  background: rgba(10, 12, 10, 0.97);
+  background: ${alpha(theme.colors.bg, 0.97)};
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid ${theme.colors.border};
   /* account for iOS safe area */
   padding-bottom: env(safe-area-inset-bottom);
 
@@ -37,7 +38,7 @@ const TabLink = styled(Link)<{ $active: boolean }>`
   justify-content: center;
   gap: 4px;
   text-decoration: none;
-  color: ${({ $active }) => ($active ? '#48c78e' : '#6b7280')};
+  color: ${({ $active }) => ($active ? theme.colors.primary : theme.colors.textMuted)};
   font-size: 0.65rem;
   font-weight: ${({ $active }) => ($active ? 600 : 400)};
   letter-spacing: 0.03em;

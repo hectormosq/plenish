@@ -1,13 +1,48 @@
+/* Design tokens (dark is the default theme). Typed wrapper: src/theme.ts */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --color-bg: #090d11;
+  --color-surface: #0f1720;
+  --color-surface-container: #16202c;
+  --color-surface-high: #1e2b3a;
+  --color-surface-highest: #263445;
+  --color-overlay: rgba(255, 255, 255, 0.04);
+  --color-overlay-strong: rgba(255, 255, 255, 0.08);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.14);
+
+  --color-text: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-text-faint: #334155;
+
+  --color-primary: #10b981;
+  --color-primary-hover: #059669;
+  --color-primary-bright: #4edea3;
+  --color-on-primary: #090d11;
+  --color-secondary: #f59e0b;
+  --color-secondary-bright: #fcd34d;
+  --color-tertiary: #ec4899;
+  --color-danger: #ef4444;
+  --color-danger-bright: #f87171;
+  --color-info: #60a5fa;
+  --color-info-bright: #93c5fd;
+  --color-violet: #a78bfa;
+  --color-indigo: #818cf8;
+  --color-shadow: #000000;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-popover: 0 12px 32px rgba(0, 0, 0, 0.5);
+  --shadow-modal: 0 16px 36px rgba(0, 0, 0, 0.65);
+  --shadow-focus: 0 0 0 2px rgba(16, 185, 129, 0.35);
+
+  --font-sans: var(--font-inter), system-ui, sans-serif;
 }
 
 html {
@@ -24,9 +59,9 @@ body {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--color-text);
+  background: var(--color-bg);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -42,10 +77,8 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+html {
+  color-scheme: dark;
 }
 
 /* ── Mobile: padding so content clears the fixed bottom nav (60px) + iOS safe area ── */

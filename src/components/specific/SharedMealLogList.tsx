@@ -6,6 +6,7 @@ import styled from 'styled-components';
 import { dismissSharedMeal } from '@/actions/meals';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Users, Clock, EyeOff } from 'lucide-react';
+import { theme, alpha } from '@/theme';
 
 // ─── Styled Components ────────────────────────────────────────────────────────
 
@@ -17,9 +18,9 @@ const MealList = styled.div`
 `;
 
 const MealItem = styled.div`
-  background: #1e1e1e;
-  border: 1px solid #2a2a2a;
-  border-radius: 10px;
+  background: ${theme.colors.surfaceContainer};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.radii.lg};
   padding: 0.875rem 1rem;
   display: flex;
   justify-content: space-between;
@@ -27,7 +28,7 @@ const MealItem = styled.div`
   gap: 0.75rem;
   transition: border-color 0.2s;
 
-  &:hover { border-color: #333; }
+  &:hover { border-color: ${theme.colors.border}; }
 `;
 
 const MealInfo = styled.div`
@@ -51,17 +52,17 @@ const MealTypeBadge = styled.span<{ $type: string }>`
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: ${({ $type }) =>
-    $type === 'breakfast' ? '#fbbf24' :
-    $type === 'lunch'     ? '#34d399' :
-    $type === 'dinner'    ? '#818cf8' : '#a78bfa'};
+    $type === 'breakfast' ? theme.colors.secondary :
+    $type === 'lunch'     ? theme.colors.primaryBright :
+    $type === 'dinner'    ? theme.colors.indigo : theme.colors.violet};
 `;
 
 const SharedBadge = styled.span`
   font-size: 0.65rem;
   font-weight: 500;
-  background: rgba(59, 130, 246, 0.1);
-  color: #60a5fa;
-  border-radius: 4px;
+  background: ${alpha(theme.colors.primary, 0.1)};
+  color: ${theme.colors.primaryBright};
+  border-radius: ${theme.radii.sm};
   padding: 0.1rem 0.4rem;
   display: flex;
   align-items: center;
@@ -70,7 +71,7 @@ const SharedBadge = styled.span`
 
 const TimeStamp = styled.span`
   font-size: 0.75rem;
-  color: #4b5563;
+  color: ${theme.colors.textMuted};
   display: flex;
   align-items: center;
   gap: 0.25rem;
@@ -78,7 +79,7 @@ const TimeStamp = styled.span`
 
 const MealText = styled.p`
   margin: 0;
-  color: #e5e7eb;
+  color: ${theme.colors.text};
   font-size: 0.9rem;
   line-height: 1.4;
   white-space: nowrap;
@@ -88,7 +89,7 @@ const MealText = styled.p`
 
 const ParticipantRow = styled.div`
   font-size: 0.75rem;
-  color: #6b7280;
+  color: ${theme.colors.textMuted};
   display: flex;
   align-items: center;
   gap: 0.3rem;
@@ -99,21 +100,21 @@ const DismissButton = styled.button`
   flex-shrink: 0;
   background: transparent;
   border: none;
-  color: #4b5563;
+  color: ${theme.colors.textMuted};
   cursor: pointer;
   padding: 0.3rem;
-  border-radius: 6px;
+  border-radius: ${theme.radii.md};
   display: flex;
   align-items: center;
   transition: color 0.2s, background 0.2s;
 
-  &:hover { background: rgba(107, 114, 128, 0.15); color: #9ca3af; }
+  &:hover { background: ${alpha(theme.colors.textMuted, 0.15)}; color: ${theme.colors.textSecondary}; }
   &:disabled { opacity: 0.3; cursor: not-allowed; }
 `;
 
 const DismissError = styled.p`
   margin: 0.25rem 0 0;
-  color: #f87171;
+  color: ${theme.colors.dangerBright};
   font-size: 0.8rem;
 `;
 
@@ -159,7 +160,7 @@ export function SharedMealLogList({ meals }: { meals: SharedMeal[] }) {
   return (
     <Card>
       <CardTitle>
-        <Users size={20} color="#3b82f6" />
+        <Users size={20} style={{ color: theme.colors.primary }} />
         Household Meals
       </CardTitle>
 

@@ -1,4 +1,5 @@
 import { DashboardLayout } from '@/app/dashboard/DashboardLayout';
+import { theme, alpha } from '@/theme';
 
 export default function HistoryPage() {
   return (
@@ -42,22 +43,22 @@ function ComingSoonContent({
           margin: 0,
           fontSize: '1.75rem',
           fontWeight: 700,
-          color: '#f0f0f0',
+          color: theme.colors.text,
           letterSpacing: '-0.02em',
         }}
       >
         {title}
       </h1>
-      <p style={{ margin: 0, color: '#6b7280', maxWidth: '400px', lineHeight: 1.6 }}>
+      <p style={{ margin: 0, color: theme.colors.textMuted, maxWidth: '400px', lineHeight: 1.6 }}>
         {description}
       </p>
       <span
         style={{
           marginTop: '0.5rem',
-          background: 'rgba(72, 199, 142, 0.12)',
-          border: '1px solid rgba(72, 199, 142, 0.3)',
-          color: '#48c78e',
-          borderRadius: '20px',
+          background: alpha(theme.colors.primary, 0.12),
+          border: `1px solid ${alpha(theme.colors.primary, 0.3)}`,
+          color: theme.colors.primary,
+          borderRadius: theme.radii.xl,
           padding: '0.4rem 1rem',
           fontSize: '0.8rem',
           fontWeight: 600,

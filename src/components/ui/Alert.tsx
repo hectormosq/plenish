@@ -3,12 +3,13 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Info, TriangleAlert } from 'lucide-react';
+import { theme, alpha } from '@/theme';
 
 type Tone = 'info' | 'warning';
 
 const TONES: Record<Tone, { bg: string; border: string; fg: string }> = {
-  info:    { bg: 'rgba(56, 189, 248, 0.08)', border: 'rgba(56, 189, 248, 0.35)', fg: '#7dd3fc' },
-  warning: { bg: 'rgba(251, 191, 36, 0.08)', border: 'rgba(251, 191, 36, 0.35)', fg: '#fcd34d' },
+  info:    { bg: alpha(theme.colors.info, 0.08), border: alpha(theme.colors.info, 0.35), fg: theme.colors.infoBright },
+  warning: { bg: alpha(theme.colors.secondary, 0.08), border: alpha(theme.colors.secondary, 0.35), fg: theme.colors.secondaryBright },
 };
 
 const Box = styled.div<{ $tone: Tone; $compact: boolean }>`

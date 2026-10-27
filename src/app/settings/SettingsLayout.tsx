@@ -6,6 +6,7 @@ import styled, { keyframes } from 'styled-components';
 import { Utensils, LogOut, ChevronLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { theme, alpha } from '@/theme';
 
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(-8px); }
@@ -14,9 +15,9 @@ const fadeIn = keyframes`
 
 const Container = styled.div`
   min-height: 100vh;
-  background-color: #0a0c0a;
-  color: #f0f0f0;
-  font-family: var(--font-geist-sans), sans-serif;
+  background-color: ${theme.colors.bg};
+  color: ${theme.colors.text};
+  font-family: var(--font-sans);
   display: flex;
   flex-direction: column;
 `;
@@ -26,8 +27,8 @@ const NavBar = styled.nav`
   align-items: center;
   justify-content: space-between;
   padding: 1rem 2rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(10, 12, 10, 0.85);
+  border-bottom: 1px solid ${theme.colors.border};
+  background: ${alpha(theme.colors.bg, 0.85)};
   backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
@@ -48,11 +49,11 @@ const NavLogo = styled.div`
   font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: -0.03em;
-  color: #f0f0f0;
+  color: ${theme.colors.text};
 `;
 
 const LogoAccent = styled.span`
-  background: linear-gradient(135deg, #48c78e, #3b82f6);
+  background: linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary});
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 `;
@@ -61,18 +62,18 @@ const BackLink = styled(Link)`
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  color: #6b7280;
+  color: ${theme.colors.textMuted};
   font-size: 0.875rem;
   text-decoration: none;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid ${theme.colors.border};
   padding: 0.4rem 0.75rem;
-  border-radius: 8px;
+  border-radius: ${theme.radii.md};
   transition: all 0.2s ease;
 
   &:hover {
-    color: #f0f0f0;
-    border-color: rgba(255,255,255,0.2);
-    background: rgba(255,255,255,0.04);
+    color: ${theme.colors.text};
+    border-color: ${theme.colors.borderStrong};
+    background: ${theme.colors.overlay};
   }
 `;
 
@@ -81,19 +82,19 @@ const SignOutButton = styled.button`
   align-items: center;
   gap: 0.4rem;
   background: transparent;
-  color: #6b7280;
-  border: 1px solid rgba(255,255,255,0.08);
+  color: ${theme.colors.textMuted};
+  border: 1px solid ${theme.colors.border};
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: ${theme.radii.md};
   font-size: 0.875rem;
   font-family: inherit;
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    color: #f0f0f0;
-    border-color: rgba(255,255,255,0.2);
-    background: rgba(255,255,255,0.04);
+    color: ${theme.colors.text};
+    border-color: ${theme.colors.borderStrong};
+    background: ${theme.colors.overlay};
   }
 `;
 
@@ -113,7 +114,7 @@ const PageHeading = styled.h1`
   margin: 0;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #f0f0f0;
+  color: ${theme.colors.text};
   letter-spacing: -0.02em;
 `;
 
@@ -132,7 +133,7 @@ export function SettingsLayout({ children }: { children: ReactNode }) {
       <NavBar>
         <NavLeft>
           <NavLogo>
-            <Utensils size={20} color="#48c78e" />
+            <Utensils size={20} style={{ color: theme.colors.primary }} />
             <LogoAccent>Plenish</LogoAccent>
           </NavLogo>
           <BackLink href="/dashboard">

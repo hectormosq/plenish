@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import { createHousehold } from '@/actions/households';
 import { Home } from 'lucide-react';
+import { theme } from '@/theme';
 
 const Prompt = styled.p`
   margin: 0;
-  color: #9ca3af;
+  color: ${theme.colors.textSecondary};
   font-size: 0.9rem;
 `;
 
@@ -20,39 +21,39 @@ const Form = styled.div`
 `;
 
 const NameInput = styled.input`
-  background: #111;
-  border: 1px solid #333;
-  border-radius: 8px;
+  background: ${theme.colors.surface};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.radii.md};
   padding: 0.6rem 0.875rem;
-  color: #f5f5f5;
+  color: ${theme.colors.text};
   font-size: 0.9rem;
   width: 100%;
   box-sizing: border-box;
 
-  &::placeholder { color: #555; }
-  &:focus { outline: none; border-color: #3b82f6; }
+  &::placeholder { color: ${theme.colors.textMuted}; }
+  &:focus { outline: none; border-color: ${theme.colors.primary}; }
 `;
 
 const CreateButton = styled.button`
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background: #3b82f6;
-  color: #fff;
+  background: ${theme.colors.primary};
+  color: ${theme.colors.onPrimary};
   border: none;
-  border-radius: 8px;
+  border-radius: ${theme.radii.md};
   padding: 0.6rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
   align-self: flex-start;
 
-  &:hover { background: #2563eb; }
+  &:hover { background: ${theme.colors.primaryHover}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const ErrorText = styled.p`
-  color: #f87171;
+  color: ${theme.colors.dangerBright};
   font-size: 0.8rem;
   margin: 0;
 `;

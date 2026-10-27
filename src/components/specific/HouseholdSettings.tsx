@@ -5,6 +5,7 @@ import { PendingInvitationBanner } from './PendingInvitationBanner';
 import { CreateHouseholdForm } from './CreateHouseholdForm';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Home, Mail } from 'lucide-react';
+import { theme } from '@/theme';
 
 export async function HouseholdSettings() {
   const [household, pendingInvites] = await Promise.all([
@@ -17,7 +18,7 @@ export async function HouseholdSettings() {
       {pendingInvites.length > 0 && (
         <Card>
           <CardTitle>
-            <Mail size={20} color="#f59e0b" />
+            <Mail size={20} style={{ color: theme.colors.secondary }} />
             Pending Invitations
           </CardTitle>
           {pendingInvites.map((invite) => (
@@ -33,7 +34,7 @@ export async function HouseholdSettings() {
 
       <Card>
         <CardTitle>
-          <Home size={20} color="#3b82f6" />
+          <Home size={20} style={{ color: theme.colors.primary }} />
           Household
         </CardTitle>
         {household ? (

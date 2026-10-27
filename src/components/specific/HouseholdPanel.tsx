@@ -5,6 +5,7 @@ import { PendingInvitationBanner } from './PendingInvitationBanner';
 import { CreateHouseholdForm } from './CreateHouseholdForm';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Home } from 'lucide-react';
+import { theme } from '@/theme';
 
 export async function HouseholdPanel() {
   const [household, pendingInvites] = await Promise.all([
@@ -15,7 +16,7 @@ export async function HouseholdPanel() {
   return (
     <Card>
       <CardTitle>
-        <Home size={20} color="#3b82f6" />
+        <Home size={20} style={{ color: theme.colors.primary }} />
         Household
       </CardTitle>
 

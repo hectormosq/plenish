@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { Target } from 'lucide-react';
+import { theme } from '@/theme';
 
 const GoalsList = styled.div`
   display: flex;
@@ -16,7 +17,7 @@ export function NutritionGoals() {
   return (
     <Card>
       <CardTitle>
-        <Target size={20} color="#10b981" />
+        <Target size={20} style={{ color: theme.colors.primary }} />
         Nutrition Goals (This Week)
       </CardTitle>
       

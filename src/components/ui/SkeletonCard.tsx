@@ -1,6 +1,7 @@
 'use client';
 
 import styled, { keyframes } from 'styled-components';
+import { theme } from '@/theme';
 
 const shimmer = keyframes`
   0% { background-position: -400px 0; }
@@ -8,16 +9,16 @@ const shimmer = keyframes`
 `;
 
 const SkeletonBase = styled.div`
-  background: linear-gradient(90deg, #1a1a1a 25%, #242424 50%, #1a1a1a 75%);
+  background: linear-gradient(90deg, ${theme.colors.surfaceContainer} 25%, ${theme.colors.surfaceHigh} 50%, ${theme.colors.surfaceContainer} 75%);
   background-size: 800px 100%;
   animation: ${shimmer} 1.4s ease-in-out infinite;
-  border-radius: 8px;
+  border-radius: ${theme.radii.md};
 `;
 
 const Wrapper = styled.div`
-  background-color: #1a1a1a;
-  border: 1px solid #333;
-  border-radius: 16px;
+  background-color: ${theme.colors.surfaceContainer};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.radii.xl};
   padding: 1.5rem;
   display: flex;
   flex-direction: column;

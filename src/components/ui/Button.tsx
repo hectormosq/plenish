@@ -1,27 +1,28 @@
 'use client';
 
 import styled, { css } from 'styled-components';
+import { theme, alpha } from '@/theme';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
 const VARIANTS = {
   primary: css`
-    background: #3b82f6;
-    color: #fff;
-    border: 1px solid #3b82f6;
-    &:hover:not(:disabled) { background: #2563eb; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+    background: ${theme.colors.primary};
+    color: ${theme.colors.onPrimary};
+    border: 1px solid ${theme.colors.primary};
+    &:hover:not(:disabled) { background: ${theme.colors.primaryHover}; box-shadow: 0 4px 12px ${alpha(theme.colors.primary, 0.3)}; }
   `,
   secondary: css`
     background: transparent;
-    color: #93c5fd;
-    border: 1px solid #3b82f6;
-    &:hover:not(:disabled) { background: rgba(59, 130, 246, 0.1); }
+    color: ${theme.colors.primaryBright};
+    border: 1px solid ${theme.colors.primary};
+    &:hover:not(:disabled) { background: ${alpha(theme.colors.primary, 0.1)}; }
   `,
   ghost: css`
     background: transparent;
-    color: #a3a3a3;
+    color: ${theme.colors.textSecondary};
     border: 1px solid transparent;
-    &:hover:not(:disabled) { color: #e5e5e5; background: #2f2f2f; }
+    &:hover:not(:disabled) { color: ${theme.colors.text}; background: ${theme.colors.surfaceHigh}; }
   `,
 };
 
@@ -31,7 +32,7 @@ export const Button = styled.button<{ $variant?: ButtonVariant; $size?: 'sm' | '
   justify-content: center;
   gap: 0.35rem;
   padding: ${(p) => (p.$size === 'sm' ? '0.3rem 0.7rem' : '0.55rem 1.1rem')};
-  border-radius: 9999px;
+  border-radius: ${theme.radii.full};
   font-size: ${(p) => (p.$size === 'sm' ? '0.8rem' : '0.9rem')};
   font-weight: 600;
   cursor: pointer;

@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import type { HouseholdMemberSimple } from '@/actions/households';
+import { theme, alpha } from '@/theme';
 
 // ─── Styled Components ────────────────────────────────────────────────────────
 
@@ -17,18 +18,18 @@ const Popover = styled.div`
   bottom: calc(100% + 8px);
   left: 0;
   z-index: 50;
-  background: #1e1e1e;
-  border: 1px solid #444;
-  border-radius: 12px;
+  background: ${theme.colors.surfaceContainer};
+  border: 1px solid ${theme.colors.borderStrong};
+  border-radius: ${theme.radii.lg};
   padding: 1rem;
   min-width: 220px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 24px ${alpha(theme.colors.shadow, 0.5)};
 `;
 
 const PopoverTitle = styled.p`
   font-size: 0.75rem;
   font-weight: 600;
-  color: #888;
+  color: ${theme.colors.textMuted};
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin: 0 0 0.75rem 0;
@@ -50,21 +51,21 @@ const MemberItem = styled.li`
   cursor: pointer;
 
   &:hover label {
-    color: #e5e5e5;
+    color: ${theme.colors.text};
   }
 `;
 
 const Checkbox = styled.input`
   width: 16px;
   height: 16px;
-  accent-color: #3b82f6;
+  accent-color: ${theme.colors.primary};
   cursor: pointer;
   flex-shrink: 0;
 `;
 
 const MemberLabel = styled.label`
   font-size: 0.875rem;
-  color: #ccc;
+  color: ${theme.colors.textSecondary};
   cursor: pointer;
   flex: 1;
   user-select: none;
@@ -72,7 +73,7 @@ const MemberLabel = styled.label`
 
 const Divider = styled.hr`
   border: none;
-  border-top: 1px solid #333;
+  border-top: 1px solid ${theme.colors.border};
   margin: 0.75rem 0;
 `;
 
@@ -84,14 +85,14 @@ const SelectAllRow = styled.div`
   cursor: pointer;
 
   &:hover label {
-    color: #e5e5e5;
+    color: ${theme.colors.text};
   }
 `;
 
 const JustMeLink = styled.button`
   background: none;
   border: none;
-  color: #888;
+  color: ${theme.colors.textMuted};
   font-size: 0.8rem;
   cursor: pointer;
   padding: 0;
@@ -100,17 +101,17 @@ const JustMeLink = styled.button`
   text-underline-offset: 2px;
 
   &:hover {
-    color: #bbb;
+    color: ${theme.colors.textSecondary};
   }
 `;
 
 const ConfirmButton = styled.button`
   width: 100%;
   margin-top: 0.75rem;
-  background: #3b82f6;
+  background: ${theme.colors.primary};
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: ${theme.radii.md};
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 600;
@@ -119,7 +120,7 @@ const ConfirmButton = styled.button`
   transition: background 0.2s;
 
   &:hover {
-    background: #2563eb;
+    background: ${theme.colors.primaryHover};
   }
 `;
 
@@ -207,7 +208,7 @@ export function MemberPickerPopover({
             onChange={handleSelectAll}
             onClick={(e) => e.stopPropagation()}
           />
-          <MemberLabel htmlFor="select-all" style={{ fontWeight: 600, color: '#e5e5e5' }}>
+          <MemberLabel htmlFor="select-all" style={{ fontWeight: 600, color: theme.colors.text }}>
             Everyone
           </MemberLabel>
         </SelectAllRow>

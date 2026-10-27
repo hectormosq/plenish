@@ -3,6 +3,7 @@
 import { useRef } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import styled from 'styled-components';
+import { theme, alpha } from '@/theme';
 
 export interface RadioCardOption<T extends string> {
   value: T;
@@ -32,20 +33,20 @@ const Option = styled.button<{ $active: boolean }>`
   width: 100%;
   text-align: left;
   padding: 0.85rem 1rem;
-  border-radius: 12px;
-  border: 1px solid ${({ $active }) => ($active ? '#3b82f6' : '#333')};
-  background: ${({ $active }) => ($active ? 'rgba(59,130,246,0.1)' : 'transparent')};
+  border-radius: ${theme.radii.lg};
+  border: 1px solid ${({ $active }) => ($active ? theme.colors.primary : theme.colors.border)};
+  background: ${({ $active }) => ($active ? alpha(theme.colors.primary, 0.1) : 'transparent')};
   color: inherit;
   font-family: inherit;
   cursor: pointer;
   transition: all 0.15s;
 
   &:hover:not(:disabled) {
-    border-color: #3b82f6;
+    border-color: ${theme.colors.primary};
   }
 
   &:focus-visible {
-    outline: 2px solid #93c5fd;
+    outline: 2px solid ${theme.colors.primaryBright};
     outline-offset: 2px;
   }
 
@@ -61,9 +62,9 @@ const Dot = styled.span<{ $active: boolean }>`
   height: 16px;
   margin-top: 0.15rem;
   border-radius: 50%;
-  border: 2px solid ${({ $active }) => ($active ? '#3b82f6' : '#4b5563')};
-  box-shadow: inset 0 0 0 3px #1a1a1a;
-  background: ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
+  border: 2px solid ${({ $active }) => ($active ? theme.colors.primary : theme.colors.borderStrong)};
+  box-shadow: inset 0 0 0 3px ${theme.colors.border};
+  background: ${({ $active }) => ($active ? theme.colors.primary : 'transparent')};
   transition: all 0.15s;
 `;
 
@@ -74,14 +75,14 @@ const Label = styled.span`
   flex-wrap: wrap;
   font-size: 0.9rem;
   font-weight: 500;
-  color: #e5e7eb;
+  color: ${theme.colors.text};
 `;
 
 const Description = styled.span`
   display: block;
   margin-top: 0.2rem;
   font-size: 0.775rem;
-  color: #6b7280;
+  color: ${theme.colors.textMuted};
   line-height: 1.4;
 `;
 

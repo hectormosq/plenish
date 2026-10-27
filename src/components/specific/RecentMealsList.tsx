@@ -6,6 +6,7 @@ import styled from 'styled-components';
 import { MealLog, deleteMeal } from '@/actions/meals';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Clock, Trash2, Utensils } from 'lucide-react';
+import { theme, alpha } from '@/theme';
 
 const ListContainer = styled.div`
   display: flex;
@@ -15,10 +16,10 @@ const ListContainer = styled.div`
 `;
 
 const MealItem = styled.div`
-  background: #222;
-  border: 1px solid #333;
+  background: ${theme.colors.surfaceHigh};
+  border: 1px solid ${theme.colors.border};
   padding: 1rem;
-  border-radius: 12px;
+  border-radius: ${theme.radii.lg};
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -26,7 +27,7 @@ const MealItem = styled.div`
 
   &:hover {
     transform: translateY(-2px);
-    border-color: #444;
+    border-color: ${theme.colors.borderStrong};
   }
 `;
 
@@ -40,7 +41,7 @@ const MealHeader = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #a3a3a3;
+  color: ${theme.colors.textSecondary};
   font-size: 0.8rem;
   text-transform: capitalize;
   font-weight: 500;
@@ -48,7 +49,7 @@ const MealHeader = styled.div`
 `;
 
 const MealText = styled.div`
-  color: #fff;
+  color: ${theme.colors.text};
   font-size: 1rem;
   font-weight: 400;
   line-height: 1.4;
@@ -57,7 +58,7 @@ const MealText = styled.div`
 const DeleteButton = styled.button`
   background: transparent;
   border: none;
-  color: #666;
+  color: ${theme.colors.textMuted};
   cursor: pointer;
   padding: 0.5rem;
   border-radius: 50%;
@@ -67,8 +68,8 @@ const DeleteButton = styled.button`
   transition: background 0.2s, color 0.2s;
 
   &:hover {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
+    background: ${alpha(theme.colors.danger, 0.1)};
+    color: ${theme.colors.danger};
   }
 
   &:disabled {
@@ -83,13 +84,13 @@ const EmptyState = styled.div`
   align-items: center;
   justify-content: center;
   padding: 3rem 1rem;
-  color: #666;
+  color: ${theme.colors.textMuted};
   text-align: center;
   gap: 1rem;
 
   h3 {
     margin: 0;
-    color: #888;
+    color: ${theme.colors.textMuted};
     font-size: 1.1rem;
   }
 `;
@@ -110,7 +111,7 @@ export function RecentMealsList({ meals }: { meals: MealLog[] }) {
   return (
     <Card>
       <CardTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <Clock size={20} color="#3b82f6" />
+        <Clock size={20} style={{ color: theme.colors.primary }} />
         Recent Activity
       </CardTitle>
 
@@ -138,7 +139,7 @@ export function RecentMealsList({ meals }: { meals: MealLog[] }) {
               <MealItem key={meal.id}>
                 <MealInfo>
                   <MealHeader>
-                    <span style={{ color: meal.meal_type === 'breakfast' ? '#fbbf24' : meal.meal_type === 'lunch' ? '#34d399' : meal.meal_type === 'dinner' ? '#818cf8' : '#a78bfa' }}>
+                    <span style={{ color: meal.meal_type === 'breakfast' ? theme.colors.secondary : meal.meal_type === 'lunch' ? theme.colors.primaryBright : meal.meal_type === 'dinner' ? theme.colors.indigo : theme.colors.violet }}>
                       ● {meal.meal_type}
                     </span>
                     <span>• {formattedDate}</span>

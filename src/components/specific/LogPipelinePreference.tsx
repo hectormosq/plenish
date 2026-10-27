@@ -10,17 +10,18 @@ import type { RadioCardOption } from '@/components/ui/RadioCardGroup';
 import { t } from '@/lib/i18n';
 import type { Lang } from '@/lib/i18n';
 import type { LogPipeline } from '@/lib/ai/log-v2/preferences';
+import { theme } from '@/theme';
 
 const SavedText = styled.p`
   margin: 0;
   font-size: 0.775rem;
-  color: #4b5563;
+  color: ${theme.colors.textMuted};
 `;
 
 const ErrorText = styled.p`
   margin: 0;
   font-size: 0.775rem;
-  color: #f87171;
+  color: ${theme.colors.dangerBright};
 `;
 
 interface Props {
@@ -62,7 +63,7 @@ export function LogPipelinePreference({ initialValue, offerShadow, lang }: Props
   return (
     <Card>
       <CardTitle>
-        <Sparkles size={20} color="#48c78e" />
+        <Sparkles size={20} style={{ color: theme.colors.primary }} />
         {t(lang, 'preferences.logPipeline.title')}
       </CardTitle>
       <RadioCardGroup
