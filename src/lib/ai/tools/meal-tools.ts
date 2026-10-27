@@ -153,7 +153,8 @@ export function createMealTools(tzOffsetMinutes: number, options: MealToolsOptio
   const logMealTool = tool({
     description:
       'Record a meal the user just described to their meal history. ' +
-      'Infer the meal_type (breakfast, lunch, dinner, snack) from conversation context or time of day. ' +
+      'Infer the meal_type (breakfast, mid_morning_snack, lunch, afternoon_snack, dinner) from conversation context or time of day. ' +
+      'A snack before 13:00 is mid_morning_snack; later it is afternoon_snack (merienda). ' +
       'Always infer nutrition and inferred_ingredients from the description.',
     inputSchema: z.object({
       ...describedMealFields,
@@ -300,7 +301,7 @@ export function createMealTools(tzOffsetMinutes: number, options: MealToolsOptio
         .describe('UUID of the meal_log entry to update. Must be obtained from get_meals or log_meal.'),
       log_text: z.string().min(1).max(500).optional()
         .describe('New description for the meal. Omit to keep unchanged.'),
-      meal_type: z.enum(['breakfast', 'lunch', 'dinner', 'snack']).optional()
+      meal_type: MealTypeEnum.optional()
         .describe('New meal type. Omit to keep unchanged.'),
       recipe_id: z.uuid().optional()
         .describe('Existing recipe UUID to link to this meal. Appended to recipe_ids.'),

@@ -44,10 +44,11 @@ const colors = {
 export const theme = {
   colors,
   meal: {
-    breakfast: colors.secondary,
-    snack:     colors.violet,
-    lunch:     colors.primaryBright,
-    dinner:    colors.indigo,
+    breakfast:         colors.secondary,
+    mid_morning_snack: colors.tertiary,
+    lunch:             colors.primaryBright,
+    afternoon_snack:   colors.violet,
+    dinner:            colors.indigo,
   },
   radii: {
     sm:   v('radius-sm'),

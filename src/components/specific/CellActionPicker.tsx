@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import styled from 'styled-components';
 import type { MealType } from '@/actions/meals';
 import { theme, alpha } from '@/theme';
+import { t } from '@/lib/i18n';
 
 // ─── Styled Components ────────────────────────────────────────────────────────
 
@@ -138,7 +139,7 @@ export function CellActionPicker({
     <>
       <Overlay onClick={onClose} />
       <Card style={{ top, left }}>
-        <CardTitle>{mealType}</CardTitle>
+        <CardTitle>{t(lang, `mealSlot.${mealType}`)}</CardTitle>
         <ActionList>
           {isFuture && (
             <ActionButton

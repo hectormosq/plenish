@@ -3,7 +3,7 @@ import { MealCalendar } from '@/components/specific/MealCalendar';
 import { LogMealFormWrapper } from '@/components/specific/LogMealFormWrapper';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { Suspense } from 'react';
-import type { MealType } from '@/actions/meals';
+import { MealTypeEnum } from '@/lib/meal-types';
 import { createClient } from '@/lib/supabase/server';
 import { getChatPanelSide, getChatPanelDefaultOpen } from '@/actions/profile';
 
@@ -22,7 +22,8 @@ export default async function DashboardPage({
     getChatPanelDefaultOpen(),
   ]);
 
-  const prefillType = params.prefillType as MealType | undefined;
+  // Old links may still carry 'snack'; an unknown type means no prefill.
+  const prefillType = MealTypeEnum.safeParse(params.prefillType).data;
   const prefillText = params.prefillText;
   const prefillDate = params.prefillDate;
 

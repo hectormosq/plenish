@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { MealTypeValue } from '@/lib/ai/log-context';
+import { MealTypeEnum, mealTypeForHour } from '@/lib/meal-types';
 import { MAX_DISHES } from './config';
 import { normalizeDishKey } from './dish-key';
 import { callStructured, localNow } from './llm';
@@ -12,8 +12,8 @@ import type { NodeContext, ParsedDish, ParsedMeal, PipelineNode } from './types'
 
 const ParseSchema = z.object({
   language: z.enum(['es', 'en']).describe('Language the user wrote in.'),
-  meal_type: z.enum(['breakfast', 'lunch', 'dinner', 'snack']).nullable()
-    .describe('Meal type if the user says it or it is clear from the words; otherwise null.'),
+  meal_type: MealTypeEnum.nullable()
+    .describe('Meal type if the user says it or it is clear from the words ("media mañana" = mid_morning_snack, "merienda" = afternoon_snack); otherwise null. A snack with no time of day is null.'),
   eaten_at: z.string().nullable()
     .describe('ISO 8601 local date-time only when the user names another day or time; otherwise null.'),
   is_shared: z.boolean()
@@ -34,14 +34,6 @@ Dishes: each food belongs to exactly one dish. A food that is part of a dish's n
 Quantities: only amounts or counts the user wrote ("dos huevos" ≈ 100 g, "300 g de entrecot"), on the dish they belong to. Never add a quantity for a food the user did not quantify.
 Language: "es" unless the message is written in English. A message that is only a dish name ("bandeja paisa", "tacos al pastor") is "es".
 If the previous assistant message asked what a dish contains, the user's reply lists its ingredients: keep that dish and put them in listed_ingredients.`;
-
-/** Default meal type from the user's local hour (Spanish meal times). */
-export function mealTypeForHour(hour: number): MealTypeValue {
-  if (hour < 11) return 'breakfast';
-  if (hour < 16) return 'lunch';
-  if (hour < 20) return 'snack';
-  return 'dinner';
-}
 
 export const parseNode: PipelineNode<{ text: string; previousAssistantText?: string }, ParsedMeal> = {
   name: 'parse',
@@ -83,17 +75,23 @@ export const parseNode: PipelineNode<{ text: string; previousAssistantText?: str
 
     // The model gives a local time; convert it to UTC with the browser offset.
     let eaten_at = now.iso;
+    let hour = now.hour;
     if (output.eaten_at && !Number.isNaN(Date.parse(output.eaten_at))) {
       const raw = /^\d{4}-\d{2}-\d{2}$/.test(output.eaten_at) ? `${output.eaten_at}T12:00:00` : output.eaten_at;
       const localMs = Date.parse(raw.replace(/(Z|[+-]\d{2}:?\d{2})$/, '') + 'Z');
       const utc = new Date(localMs + ctx.tzOffsetMinutes * 60_000);
-      if (utc.getTime() <= ctx.now.getTime() + 60_000) eaten_at = utc.toISOString();
+      if (utc.getTime() <= ctx.now.getTime() + 60_000) {
+        eaten_at = utc.toISOString();
+        // A stated time of day picks the slot ("una manzana a las 11").
+        const statedHour = /T(\d{2}):/.exec(output.eaten_at)?.[1];
+        if (statedHour) hour = Number(statedHour);
+      }
     }
 
     return {
       output: {
         language: output.language,
-        meal_type: output.meal_type ?? mealTypeForHour(now.hour),
+        meal_type: output.meal_type ?? mealTypeForHour(hour),
         eaten_at,
         is_shared: output.is_shared,
         dishes,

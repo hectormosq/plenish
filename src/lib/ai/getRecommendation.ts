@@ -2,6 +2,7 @@ import { generateText, Output } from "ai";
 import { z } from "zod";
 import { getAIModel } from "@/lib/ai/provider";
 import type { MealLog } from "@/actions/meals";
+import { MealTypeEnum } from "@/lib/meal-types";
 import { createServerWriter } from "ai-session-logger/next/server";
 
 export const RecommendationSchema = z.object({
@@ -11,7 +12,7 @@ export const RecommendationSchema = z.object({
       "Name of the recommended dish, in Spanish if culturally appropriate",
     ),
   description: z.string().describe("1-2 sentence description of the dish"),
-  mealType: z.enum(["breakfast", "lunch", "dinner", "snack"]),
+  mealType: MealTypeEnum,
   prepTimeMinutes: z.number().int().positive(),
   estimatedCalories: z.number().int().positive(),
   reason: z
