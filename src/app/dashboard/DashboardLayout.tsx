@@ -89,9 +89,7 @@ const NavLogo = styled.div`
 `;
 
 const LogoAccent = styled.span`
-  background: linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary});
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: ${theme.colors.primary};
 `;
 
 const NavActions = styled.div`
@@ -317,7 +315,7 @@ const FAB = styled.button`
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary});
+  background: ${theme.colors.primary};
   border: none;
   color: ${theme.colors.onPrimary};
   display: flex;

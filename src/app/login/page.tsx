@@ -54,9 +54,7 @@ const AppName = styled.h1`
   font-size: 2.25rem;
   font-weight: 800;
   letter-spacing: -0.04em;
-  background: linear-gradient(135deg, ${theme.colors.primary} 0%, ${theme.colors.primary} 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: ${theme.colors.primary};
   margin: 0;
 `;
 
@@ -94,7 +92,7 @@ const GoogleButton = styled.button`
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px ${theme.colors.borderStrong};
+    box-shadow: 0 8px 24px ${alpha(theme.colors.text, 0.12)};
   }
 
   &:active {

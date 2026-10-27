@@ -48,7 +48,7 @@ const TextInput = styled.input`
   &:focus {
     outline: none;
     border-color: ${theme.colors.primary};
-    box-shadow: 0 0 0 2px ${alpha(theme.colors.primary, 0.2)};
+    box-shadow: ${theme.shadows.focus};
   }
 
   &::placeholder {

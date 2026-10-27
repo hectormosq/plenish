@@ -23,7 +23,7 @@ const Card = styled.div`
   min-width: 180px;
   max-width: 240px;
   width: max-content;
-  box-shadow: 0 8px 24px ${alpha(theme.colors.shadow, 0.5)};
+  box-shadow: ${theme.shadows.popover};
 `;
 
 const CardTitle = styled.p`

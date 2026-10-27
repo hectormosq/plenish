@@ -526,7 +526,7 @@ const TooltipPortal = styled.div<{ $x: number; $y: number }>`
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.radii.lg};
   padding: 0.75rem;
-  box-shadow: 0 12px 32px ${alpha(theme.colors.shadow, 0.5)};
+  box-shadow: ${theme.shadows.popover};
   pointer-events: all;
 `;
 

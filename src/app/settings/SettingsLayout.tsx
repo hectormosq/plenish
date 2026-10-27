@@ -53,9 +53,7 @@ const NavLogo = styled.div`
 `;
 
 const LogoAccent = styled.span`
-  background: linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary});
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: ${theme.colors.primary};
 `;
 
 const BackLink = styled(Link)`

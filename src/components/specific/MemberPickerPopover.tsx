@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import type { HouseholdMemberSimple } from '@/actions/households';
-import { theme, alpha } from '@/theme';
+import { theme } from '@/theme';
 
 // ─── Styled Components ────────────────────────────────────────────────────────
 
@@ -23,7 +23,7 @@ const Popover = styled.div`
   border-radius: ${theme.radii.lg};
   padding: 1rem;
   min-width: 220px;
-  box-shadow: 0 8px 24px ${alpha(theme.colors.shadow, 0.5)};
+  box-shadow: ${theme.shadows.popover};
 `;
 
 const PopoverTitle = styled.p`

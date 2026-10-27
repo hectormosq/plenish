@@ -14,7 +14,7 @@ import styled from 'styled-components';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { MessageSquare, Send } from 'lucide-react';
 import React, { useRef, useEffect } from 'react';
-import { theme, alpha } from '@/theme';
+import { theme } from '@/theme';
 
 const ChatContainer = styled.div`
   display: flex;
@@ -24,7 +24,7 @@ const ChatContainer = styled.div`
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.radii.xl};
   padding: 1.5rem;
-  box-shadow: 0 4px 6px -1px ${alpha(theme.colors.shadow, 0.1)};
+  box-shadow: ${theme.shadows.card};
 `;
 
 const HeaderRow = styled.div`

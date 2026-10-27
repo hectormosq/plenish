@@ -85,8 +85,6 @@ export const theme = {
   },
 } as const;
 
-export type AppTheme = typeof theme;
-
 /** A token colour at the given opacity (0–1), e.g. `alpha(theme.colors.primary, 0.12)`. */
 export function alpha(color: string, amount: number): string {
   return `color-mix(in srgb, ${color} ${Math.round(amount * 1000) / 10}%, transparent)`;
