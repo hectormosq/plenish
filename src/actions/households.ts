@@ -337,32 +337,3 @@ export async function getPendingInvitations(): Promise<PendingInvitation[]> {
   }));
 }
 
-export async function getHouseholdMeals(limit = 20) {
-  const supabase = await createClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return [];
-
-  const { data: membership } = await supabase
-    .from('household_members')
-    .select('household_id')
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .maybeSingle();
-
-  if (!membership) return [];
-
-  const { data, error } = await supabase
-    .from('meal_logs')
-    .select('*, meal_participants(user_id, dismissed)')
-    .eq('is_shared', true)
-    .eq('household_id', membership.household_id)
-    .order('eaten_at', { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.error('Error fetching household meals:', error);
-    return [];
-  }
-
-  return data ?? [];
-}

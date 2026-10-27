@@ -121,27 +121,6 @@ export async function getWeekMeals(): Promise<MealLog[]> {
   return data as MealLog[];
 }
 
-export async function getRecentMeals(): Promise<MealLog[]> {
-  const supabase = await createClient();
-  
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return [];
-
-  const { data, error } = await supabase
-    .from('meal_logs')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('eaten_at', { ascending: false })
-    .limit(10);
-
-  if (error) {
-    console.error('Error fetching meals:', error);
-    return [];
-  }
-
-  return data as MealLog[];
-}
-
 export async function deleteMeal(id: string) {
   const supabase = await createClient();
   

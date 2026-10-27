@@ -37,7 +37,7 @@ Not real yet: `NutritionGoals.tsx` is hardcoded and unused; `recipes.embedding` 
 2. Pass it as a slot prop to `DashboardLayout`.
 3. Wrap it in `<Suspense>` with a skeleton fallback in `src/app/dashboard/page.tsx`.
 
-Reference: `src/components/specific/RecentMeals.tsx` + `RecentMealsList.tsx`.
+Reference: `src/components/specific/MealCalendar.tsx` + `src/components/ui/MealWeekGrid.tsx`.
 
 ## Working rules
 1. Before large changes, cross-reference `docs/product_spec.md` and `docs/database_schema.md`.
